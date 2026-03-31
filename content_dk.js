@@ -362,11 +362,6 @@
 
     if (msg.type === "BET_FIRE") {
       dkBetPhase = "idle";
-      // Hold — do not click yet. Wait for BET_EXECUTE which comes only after
-      // FD confirms location is verified and server re-validates the arb.
-    }
-
-    if (msg.type === "BET_EXECUTE") {
       clickDkButton();
     }
 
