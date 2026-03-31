@@ -4,7 +4,21 @@
 // Find your local IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
 
 const http = require("http");
+const os = require("os");
 const PORT = 7429;
+
+function getLocalIPs() {
+  const results = [];
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        results.push({ name, address: iface.address });
+      }
+    }
+  }
+  return results;
+}
 
 let state = {
   draftkings: null,
@@ -96,7 +110,16 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n✓ Arb LAN server running at http://localhost:${PORT}`);
-  console.log(`  Share with other devices on your network using your local IP.`);
-  console.log(`  Find your IP: run  ipconfig  and look for IPv4 Address.\n`);
+  const ips = getLocalIPs();
+  console.log(`\n✓ Arb LAN server running on port ${PORT}\n`);
+  console.log(`  Local:    http://localhost:${PORT}`);
+  if (ips.length === 0) {
+    console.log(`  Network:  (no network interfaces found)`);
+  } else {
+    for (const { name, address } of ips) {
+      console.log(`  Network:  http://${address}:${PORT}  (${name})`);
+    }
+    console.log(`\n  → Enter one of the Network addresses above into the extension popup.`);
+  }
+  console.log();
 });
