@@ -90,6 +90,22 @@
       }
       .arb-close-btn:hover { color: #fff; }
       .arb-bet-capped { font-size: 10px; color: #ff9800; font-weight: 600; }
+      .arb-bet-btn {
+        background: #00c853; border: none; color: #000; cursor: pointer;
+        font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 5px;
+        letter-spacing: 0.5px; white-space: nowrap;
+      }
+      .arb-bet-btn:hover { background: #00e676; }
+      .arb-bet-waiting {
+        font-size: 11px; color: #f9a825; font-weight: 700; white-space: nowrap;
+        animation: arb-pulse 1s ease-in-out infinite alternate;
+      }
+      .arb-bet-cancel-btn {
+        background: none; border: 1px solid #ff5252; color: #ff5252; cursor: pointer;
+        font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px;
+      }
+      .arb-bet-cancel-btn:hover { background: #ff5252; color: #000; }
+      @keyframes arb-pulse { from { opacity: 1; } to { opacity: 0.4; } }
     `;
   }
 
@@ -184,6 +200,11 @@
           <span class="arb-profit-value">+$${result.profit}</span>
           <span class="arb-profit-pct">${stakeNote}</span>
         </div>
+        ${dkBetPhase === "idle"
+          ? `<button class="arb-bet-btn" id="arb-place-bet">Place Bet</button>`
+          : `<span class="arb-bet-waiting">Waiting for FanDuel...</span>
+             <button class="arb-bet-cancel-btn" id="arb-cancel-bet">Cancel</button>`
+        }
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
@@ -217,6 +238,32 @@
         });
       });
     }
+
+    const placeBetBtn = document.getElementById("arb-place-bet");
+    if (placeBetBtn) {
+      placeBetBtn.onclick = () => {
+        dkBetPhase = "waiting";
+        chrome.runtime.sendMessage({ type: "BET_INTENT", source: "draftkings" });
+        chrome.storage.local.get("arbStake", ({ arbStake }) => {
+          chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+          });
+        });
+      };
+    }
+
+    const cancelBetBtn = document.getElementById("arb-cancel-bet");
+    if (cancelBetBtn) {
+      cancelBetBtn.onclick = () => {
+        dkBetPhase = "idle";
+        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "draftkings" });
+        chrome.storage.local.get("arbStake", ({ arbStake }) => {
+          chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+          });
+        });
+      };
+    }
   }
 
   // ---- DraftKings odds scraping (betslip only) ----
@@ -245,6 +292,12 @@
   }
 
   let lastFilledAmount = null;
+  let dkBetPhase = "idle"; // "idle" | "waiting"
+
+  function clickDkButton() {
+    const btn = document.querySelector('[test-dataid="betslip-place-bet-button"]');
+    if (btn) btn.click();
+  }
 
   // Auto-fill the DK betslip wager input.
   // DK uses React controlled inputs — must use the native setter trick.
@@ -275,6 +328,7 @@
     }
     if (odds !== lastOdds) {
       lastOdds = odds;
+      if (dkBetPhase === "waiting") dkBetPhase = "idle";
       chrome.runtime.sendMessage({ type: "ODDS_UPDATE", source: "draftkings", odds });
     }
   }
@@ -284,6 +338,20 @@
     if (msg.type === "ODDS_DATA") {
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         renderBanner(msg.draftkings, msg.fanduel, arbStake || 100, msg.fdMaxWager);
+      });
+    }
+
+    if (msg.type === "BET_FIRE") {
+      dkBetPhase = "idle";
+      clickDkButton();
+    }
+
+    if (msg.type === "BET_CANCEL") {
+      dkBetPhase = "idle";
+      chrome.storage.local.get("arbStake", ({ arbStake }) => {
+        chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+          if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+        });
       });
     }
   });

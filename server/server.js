@@ -31,6 +31,12 @@ let state = {
   updatedAt: null
 };
 
+let betState = {
+  phase: "idle",      // "idle" | "waiting" | "firing"
+  intents: new Set(), // "draftkings" and/or "fanduel"
+  timeoutHandle: null
+};
+
 // Per-client metadata: source -> { ws, ip, connectedAt, lastSeenAt, oddsUpdates }
 const clientMeta = new Map();
 
@@ -85,6 +91,29 @@ function buildDebugSnapshot() {
     });
   }
   return { state, clients, eventLog: [...eventLog] };
+}
+
+function americanToDecimal(american) {
+  const n = parseFloat(String(american).replace("−", "-").replace("–", "-"));
+  if (isNaN(n)) return null;
+  if (n > 0) return n / 100 + 1;
+  return 100 / Math.abs(n) + 1;
+}
+
+function serverArbValid() {
+  const dkDec = americanToDecimal(state.draftkings);
+  const fdDec = americanToDecimal(state.fanduel);
+  if (!dkDec || !fdDec) return false;
+  return (1 / dkDec) + (1 / fdDec) < 1;
+}
+
+function resetBetState() {
+  if (betState.timeoutHandle) {
+    clearTimeout(betState.timeoutHandle);
+    betState.timeoutHandle = null;
+  }
+  betState.phase = "idle";
+  betState.intents = new Set();
 }
 
 function applyOddsUpdate(source, odds, fdMaxWager) {
@@ -204,6 +233,54 @@ wss.on("connection", (ws, req) => {
       const oddsStr = msg.odds ?? "null";
       pushLog("ok", `odds update from ${msg.source}: ${oddsStr}${msg.fdMaxWager != null ? ` (max $${msg.fdMaxWager})` : ""}`);
       wsBroadcast({ type: "ODDS_DATA", ...state });
+      // Cancel any in-flight bet cycle if odds changed while waiting
+      if (betState.phase === "waiting") {
+        pushLog("warn", "odds changed during bet handshake — cancelling");
+        wsBroadcast({ type: "BET_CANCEL", reason: "odds_changed" });
+        resetBetState();
+      }
+      broadcastDebugSnapshot();
+      return;
+    }
+
+    if (msg.type === "BET_INTENT") {
+      if (betState.phase === "firing") return;
+      betState.intents.add(msg.source);
+      pushLog("info", `BET_INTENT from ${msg.source} (have: ${[...betState.intents].join(", ")})`);
+
+      if (betState.intents.size === 1) {
+        betState.phase = "waiting";
+        const waitingOn = msg.source === "draftkings" ? "fanduel" : "draftkings";
+        wsBroadcast({ type: "BET_WAITING", waiting_on: waitingOn });
+        betState.timeoutHandle = setTimeout(() => {
+          pushLog("warn", "BET handshake timed out — resetting");
+          wsBroadcast({ type: "BET_CANCEL", reason: "timeout" });
+          resetBetState();
+          broadcastDebugSnapshot();
+        }, 30000);
+      } else if (betState.intents.size === 2) {
+        clearTimeout(betState.timeoutHandle);
+        betState.timeoutHandle = null;
+        if (!serverArbValid()) {
+          pushLog("warn", "BET_INTENT: arb no longer valid — cancelling");
+          wsBroadcast({ type: "BET_CANCEL", reason: "no_arb" });
+          resetBetState();
+        } else {
+          betState.phase = "firing";
+          pushLog("ok", "BET_FIRE — arb confirmed, firing both sides");
+          wsBroadcast({ type: "BET_FIRE" });
+          setTimeout(() => { resetBetState(); broadcastDebugSnapshot(); }, 3000);
+        }
+        broadcastDebugSnapshot();
+      }
+      return;
+    }
+
+    if (msg.type === "BET_CANCEL") {
+      if (betState.phase === "idle") return;
+      pushLog("warn", `BET_CANCEL requested by ${msg.source}`);
+      wsBroadcast({ type: "BET_CANCEL", reason: "user_cancelled" });
+      resetBetState();
       broadcastDebugSnapshot();
       return;
     }
@@ -227,6 +304,12 @@ wss.on("connection", (ws, req) => {
       wsClients.delete(clientSource);
       clientMeta.delete(clientSource);
       pushLog("warn", `${clientSource} disconnected`);
+      // Cancel any in-flight bet cycle if a participant dropped
+      if (betState.phase !== "idle") {
+        pushLog("warn", `${clientSource} disconnected during bet handshake — cancelling`);
+        wsBroadcast({ type: "BET_CANCEL", reason: "user_cancelled" });
+        resetBetState();
+      }
       broadcastDebugSnapshot();
     }
   });

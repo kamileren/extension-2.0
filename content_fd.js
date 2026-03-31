@@ -103,6 +103,22 @@
         font-size: 16px; padding: 2px 6px; line-height: 1;
       }
       .arb-close-btn:hover { color: #fff; }
+      .arb-bet-btn {
+        background: #00c853; border: none; color: #000; cursor: pointer;
+        font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 5px;
+        letter-spacing: 0.5px; white-space: nowrap;
+      }
+      .arb-bet-btn:hover { background: #00e676; }
+      .arb-bet-waiting {
+        font-size: 11px; color: #f9a825; font-weight: 700; white-space: nowrap;
+        animation: arb-pulse 1s ease-in-out infinite alternate;
+      }
+      .arb-bet-cancel-btn {
+        background: none; border: 1px solid #ff5252; color: #ff5252; cursor: pointer;
+        font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px;
+      }
+      .arb-bet-cancel-btn:hover { background: #ff5252; color: #000; }
+      @keyframes arb-pulse { from { opacity: 1; } to { opacity: 0.4; } }
       .arb-reset-max-btn {
         background: #3a1a00; border: 1px solid #ff9800; color: #ff9800;
         cursor: pointer; font-size: 10px; font-weight: 700; padding: 3px 7px;
@@ -114,6 +130,7 @@
   }
 
   let lastFilledAmount = null;
+  let fdBetPhase = "idle"; // "idle" | "waiting"
 
   function renderBanner(dkOdds, fdOdds, stake, fdMaxWager) {
     injectStyles();
@@ -209,6 +226,11 @@
           <span class="arb-profit-value">+$${result.profit}</span>
           <span class="arb-profit-pct">${stakeNote}</span>
         </div>
+        ${fdBetPhase === "idle"
+          ? `<button class="arb-bet-btn" id="arb-place-bet">Place Bet</button>`
+          : `<span class="arb-bet-waiting">Waiting for DraftKings...</span>
+             <button class="arb-bet-cancel-btn" id="arb-cancel-bet">Cancel</button>`
+        }
         ${fdMax != null && fdMax < 100000 ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
@@ -259,6 +281,32 @@
           if (data) renderBanner(data.draftkings, data.fanduel, newStake, data.fdMaxWager);
         });
       });
+    }
+
+    const placeBetBtn = document.getElementById("arb-place-bet");
+    if (placeBetBtn) {
+      placeBetBtn.onclick = () => {
+        fdBetPhase = "waiting";
+        chrome.runtime.sendMessage({ type: "BET_INTENT", source: "fanduel" });
+        chrome.storage.local.get("arbStake", ({ arbStake }) => {
+          chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+          });
+        });
+      };
+    }
+
+    const cancelBetBtn = document.getElementById("arb-cancel-bet");
+    if (cancelBetBtn) {
+      cancelBetBtn.onclick = () => {
+        fdBetPhase = "idle";
+        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "fanduel" });
+        chrome.storage.local.get("arbStake", ({ arbStake }) => {
+          chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+          });
+        });
+      };
     }
   }
 
@@ -316,6 +364,8 @@
       lastFilledAmount = null;
     }
 
+    if (odds !== lastOdds && fdBetPhase === "waiting") fdBetPhase = "idle";
+
     if (odds !== lastOdds || effectiveMax !== lastMax) {
       lastOdds = odds;
       lastMax = effectiveMax;
@@ -326,6 +376,14 @@
         fdMaxWager: effectiveMax
       });
     }
+  }
+
+  function clickFdButton() {
+    const buttons = Array.from(document.querySelectorAll('[role="button"]'));
+    const btn = buttons.find(b =>
+      Array.from(b.querySelectorAll("span")).some(s => /^Place .+ bet$/i.test(s.textContent.trim()))
+    );
+    if (btn) btn.click();
   }
 
   // Find the FanDuel betslip wager input and set its value, then fire
@@ -376,6 +434,20 @@
     if (msg.type === "ODDS_DATA") {
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         renderBanner(msg.draftkings, msg.fanduel, arbStake || 100, msg.fdMaxWager);
+      });
+    }
+
+    if (msg.type === "BET_FIRE") {
+      fdBetPhase = "idle";
+      clickFdButton();
+    }
+
+    if (msg.type === "BET_CANCEL") {
+      fdBetPhase = "idle";
+      chrome.storage.local.get("arbStake", ({ arbStake }) => {
+        chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+          if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+        });
       });
     }
   });

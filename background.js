@@ -94,6 +94,20 @@ function connectWebSocket(url) {
 
       if (changed) broadcast();
     }
+
+    // Forward bet coordination messages to all DK/FD tabs instantly
+    if (msg.type === "BET_FIRE" || msg.type === "BET_CANCEL" || msg.type === "BET_WAITING") {
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (
+            tab.url &&
+            (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca"))
+          ) {
+            chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
+          }
+        });
+      });
+    }
   };
 
   ws.onclose = () => {
@@ -144,6 +158,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const newUrl = message.serverUrl || null;
     chrome.storage.local.set({ serverUrl: newUrl });
     connectWebSocket(newUrl);
+  }
+
+  if (message.type === "BET_INTENT") {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "BET_INTENT", source: message.source }));
+    }
+  }
+
+  if (message.type === "BET_CANCEL") {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "BET_CANCEL", source: message.source }));
+    }
   }
 
   if (message.type === "GET_WS_STATUS") {
