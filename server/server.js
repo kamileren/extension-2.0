@@ -5,7 +5,7 @@
 
 const http = require("http");
 const os = require("os");
-const PORT = 7429;
+const PORT = 80;
 
 function getLocalIPs() {
   const results = [];
