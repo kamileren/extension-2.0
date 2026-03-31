@@ -6,11 +6,13 @@ let oddsData = {
 };
 
 let serverUrl = null;
-let serverPollInterval = null;
+let ws = null;
+let wsReconnectTimer = null;
+let wsIdentified = false;
 
 // Load saved server URL on startup
 chrome.storage.local.get("serverUrl", ({ serverUrl: saved }) => {
-  if (saved) startServerSync(saved);
+  if (saved) connectWebSocket(saved);
 });
 
 function broadcast() {
@@ -31,60 +33,97 @@ function broadcast() {
   });
 }
 
-// Push local update to LAN server
-async function pushToServer(source, odds, fdMaxWager) {
-  if (!serverUrl) return;
-  try {
-    await fetch(`http://${serverUrl}/update`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source, odds, fdMaxWager }),
-      signal: AbortSignal.timeout(2000)
-    });
-  } catch (_) {}
-}
+// ── WebSocket client ─────────────────────────────────────────────────────────
 
-// Pull state from LAN server and merge — remote wins for the opposite side
-async function pullFromServer() {
-  if (!serverUrl) return;
-  try {
-    const r = await fetch(`http://${serverUrl}/state`, { signal: AbortSignal.timeout(2000) });
-    if (!r.ok) return;
-    const remote = await r.json();
-
-    let changed = false;
-
-    if (remote.draftkings !== oddsData.draftkings) {
-      oddsData.draftkings = remote.draftkings;
-      changed = true;
-    }
-    if (remote.fanduel !== oddsData.fanduel) {
-      oddsData.fanduel = remote.fanduel;
-      changed = true;
-    }
-    // Sticky max: only update if remote has a value
-    if (remote.fdMaxWager != null && remote.fdMaxWager !== oddsData.fdMaxWager) {
-      oddsData.fdMaxWager = remote.fdMaxWager;
-      changed = true;
-    }
-
-    if (changed) broadcast();
-  } catch (_) {}
-}
-
-function startServerSync(url) {
+function connectWebSocket(url) {
   serverUrl = url;
-  if (serverPollInterval) clearInterval(serverPollInterval);
-  if (!url) { serverPollInterval = null; return; }
-  // Poll server every 2 seconds to pick up odds from the other device
-  serverPollInterval = setInterval(pullFromServer, 2000);
+
+  // Clean up any existing connection
+  if (ws) {
+    ws.onclose = null; // prevent reconnect loop on intentional close
+    ws.close();
+    ws = null;
+  }
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = null;
+  }
+  if (!url) return;
+
+  wsIdentified = false;
+
+  try {
+    ws = new WebSocket(`ws://${url}`);
+  } catch (_) {
+    scheduleReconnect(url);
+    return;
+  }
+
+  ws.onopen = () => {
+    wsIdentified = true;
+    // Tell the server we are connected (no single-source identity at bg level —
+    // bg acts as a relay, not a sportsbook. Send null source so server still
+    // broadcasts state back to us)
+    ws.send(JSON.stringify({ type: "IDENTIFY", source: "background" }));
+  };
+
+  ws.onmessage = (event) => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch { return; }
+
+    if (msg.type === "ODDS_DATA") {
+      let changed = false;
+
+      if (msg.draftkings !== oddsData.draftkings) {
+        oddsData.draftkings = msg.draftkings;
+        changed = true;
+      }
+      if (msg.fanduel !== oddsData.fanduel) {
+        oddsData.fanduel = msg.fanduel;
+        changed = true;
+      }
+      if (msg.fdMaxWager != null && msg.fdMaxWager !== oddsData.fdMaxWager) {
+        oddsData.fdMaxWager = msg.fdMaxWager;
+        changed = true;
+      }
+      // Allow server-side null to clear the sticky max
+      if (msg.fdMaxWager === null && oddsData.fdMaxWager !== null) {
+        oddsData.fdMaxWager = null;
+        changed = true;
+      }
+
+      if (changed) broadcast();
+    }
+  };
+
+  ws.onclose = () => {
+    wsIdentified = false;
+    ws = null;
+    scheduleReconnect(url);
+  };
+
+  ws.onerror = () => {
+    // onclose fires after onerror — reconnect happens there
+  };
 }
+
+function scheduleReconnect(url) {
+  if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+  wsReconnectTimer = setTimeout(() => connectWebSocket(url), 3000);
+}
+
+// Send an odds update to the server over WebSocket
+function pushToServer(source, odds, fdMaxWager) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "ODDS_UPDATE", source, odds, fdMaxWager: fdMaxWager ?? null }));
+}
+
+// ── Chrome message listener ──────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "ODDS_UPDATE") {
     oddsData[message.source] = message.odds;
     if (message.source === "fanduel") {
-      // Allow explicit null to clear the sticky max (reset button)
       if (message.hasOwnProperty("fdMaxWager")) {
         if (message.fdMaxWager != null) {
           oddsData.fdMaxWager = message.fdMaxWager;
@@ -94,7 +133,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     }
     broadcast();
-    // Push to server so the other device sees it
     pushToServer(message.source, message.odds, message.fdMaxWager ?? null);
   }
 
@@ -103,8 +141,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "SET_SERVER") {
-    chrome.storage.local.set({ serverUrl: message.serverUrl || null });
-    startServerSync(message.serverUrl || null);
+    const newUrl = message.serverUrl || null;
+    chrome.storage.local.set({ serverUrl: newUrl });
+    connectWebSocket(newUrl);
+  }
+
+  if (message.type === "GET_WS_STATUS") {
+    sendResponse({
+      connected: ws !== null && ws.readyState === WebSocket.OPEN,
+      serverUrl
+    });
   }
 
   return true;

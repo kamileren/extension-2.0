@@ -79,7 +79,7 @@ function render(dkOdds, fdOdds, stake, fdMaxWager) {
 }
 
 // ---- Server status check ----
-async function checkServer(serverUrl) {
+function checkServer(serverUrl) {
   const dot = document.getElementById("status-dot");
   const txt = document.getElementById("status-text");
   if (!serverUrl) {
@@ -87,18 +87,15 @@ async function checkServer(serverUrl) {
     txt.textContent = "Not configured — single device mode";
     return;
   }
-  try {
-    const r = await fetch(`http://${serverUrl}/state`, { signal: AbortSignal.timeout(2000) });
-    if (r.ok) {
+  chrome.runtime.sendMessage({ type: "GET_WS_STATUS" }, (status) => {
+    if (status && status.connected) {
       dot.className = "status-dot online";
       txt.textContent = `Connected to ${serverUrl}`;
     } else {
-      throw new Error();
+      dot.className = "status-dot offline";
+      txt.textContent = `Cannot reach ${serverUrl}`;
     }
-  } catch {
-    dot.className = "status-dot offline";
-    txt.textContent = `Cannot reach ${serverUrl}`;
-  }
+  });
 }
 
 function loadAndRender() {

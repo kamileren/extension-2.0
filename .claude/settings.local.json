@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(netstat -ano)",
-      "Bash(findstr 7429)"
+      "Bash(findstr 7429)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

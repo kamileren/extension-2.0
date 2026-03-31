@@ -5,6 +5,8 @@
 
 const http = require("http");
 const os = require("os");
+const { WebSocketServer } = require("ws");
+
 const PORT = 80;
 
 function getLocalIPs() {
@@ -20,6 +22,8 @@ function getLocalIPs() {
   return results;
 }
 
+// ── State ────────────────────────────────────────────────────────────────────
+
 let state = {
   draftkings: null,
   fanduel: null,
@@ -27,8 +31,76 @@ let state = {
   updatedAt: null
 };
 
+// Per-client metadata: source -> { ws, ip, connectedAt, lastSeenAt, oddsUpdates }
+const clientMeta = new Map();
+
+// Circular event log — last 50 entries
+const eventLog = [];
+function pushLog(level, msg) {
+  const entry = { ts: Date.now(), level, msg };
+  eventLog.push(entry);
+  if (eventLog.length > 50) eventLog.shift();
+  const prefix = level === "info" ? "ℹ" : level === "warn" ? "⚠" : "✓";
+  console.log(`${prefix}  ${new Date(entry.ts).toLocaleTimeString()}  ${msg}`);
+  // Push log entry to browser dashboard clients
+  wsBroadcastDashboard({ type: "LOG", entry });
+}
+
+// ── WebSocket helpers ────────────────────────────────────────────────────────
+
+// Extension clients (DK/FD)
+const wsClients = new Map(); // source -> ws
+
+// Browser dashboard clients (the status page)
+const dashboardClients = new Set();
+
+function wsBroadcast(data) {
+  const msg = JSON.stringify(data);
+  for (const ws of wsClients.values()) {
+    if (ws.readyState === ws.OPEN) ws.send(msg);
+  }
+}
+
+function wsBroadcastDashboard(data) {
+  const msg = JSON.stringify(data);
+  for (const ws of dashboardClients) {
+    if (ws.readyState === ws.OPEN) ws.send(msg);
+  }
+}
+
+function broadcastDebugSnapshot() {
+  wsBroadcastDashboard({ type: "SNAPSHOT", ...buildDebugSnapshot() });
+}
+
+function buildDebugSnapshot() {
+  const clients = [];
+  for (const [source, meta] of clientMeta.entries()) {
+    clients.push({
+      source,
+      ip: meta.ip,
+      connectedAt: meta.connectedAt,
+      lastSeenAt: meta.lastSeenAt,
+      oddsUpdates: meta.oddsUpdates,
+      connected: meta.ws.readyState === meta.ws.OPEN
+    });
+  }
+  return { state, clients, eventLog: [...eventLog] };
+}
+
+function applyOddsUpdate(source, odds, fdMaxWager) {
+  if (source === "draftkings") {
+    state.draftkings = odds ?? null;
+  } else if (source === "fanduel") {
+    state.fanduel = odds ?? null;
+    if (fdMaxWager != null) state.fdMaxWager = fdMaxWager;
+    if (fdMaxWager === null) state.fdMaxWager = null;
+  }
+  state.updatedAt = Date.now();
+}
+
+// ── HTTP Server ──────────────────────────────────────────────────────────────
+
 const server = http.createServer((req, res) => {
-  // CORS — allow the extension (chrome-extension://*) and any LAN origin
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -46,23 +118,23 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /update — receive odds from one side
+  // GET /debug — full debug snapshot as JSON
+  if (req.method === "GET" && req.url === "/debug") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(buildDebugSnapshot(), null, 2));
+    return;
+  }
+
+  // POST /update — HTTP fallback, kept for compatibility
   if (req.method === "POST" && req.url === "/update") {
     let body = "";
     req.on("data", chunk => { body += chunk; });
     req.on("end", () => {
       try {
         const data = JSON.parse(body);
-        if (data.source === "draftkings") {
-          state.draftkings = data.odds ?? null;
-        } else if (data.source === "fanduel") {
-          state.fanduel = data.odds ?? null;
-          // Only update sticky max if a new value is provided
-          if (data.fdMaxWager != null) {
-            state.fdMaxWager = data.fdMaxWager;
-          }
-        }
-        state.updatedAt = Date.now();
+        applyOddsUpdate(data.source, data.odds, data.fdMaxWager ?? null);
+        wsBroadcast({ type: "ODDS_DATA", ...state });
+        broadcastDebugSnapshot();
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true, state }));
       } catch (e) {
@@ -73,35 +145,10 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // GET / — simple status page
+  // GET / — dashboard
   if (req.method === "GET" && req.url === "/") {
     res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(`<!DOCTYPE html>
-<html>
-<head><title>Arb Server</title>
-<style>
-  body { font-family: monospace; background: #0f1923; color: #00c853; padding: 30px; }
-  pre { background: #1a2d1a; padding: 16px; border-radius: 8px; border: 1px solid #00c853; }
-  h2 { color: #fff; }
-</style>
-</head>
-<body>
-  <h2>Arb Calculator — LAN Server</h2>
-  <p>Running on port <b>${PORT}</b></p>
-  <p>Share your local IP with the other device and set it in the extension settings.</p>
-  <h3>Current State:</h3>
-  <pre id="state">Loading...</pre>
-  <script>
-    async function refresh() {
-      const r = await fetch("/state");
-      const d = await r.json();
-      document.getElementById("state").textContent = JSON.stringify(d, null, 2);
-    }
-    refresh();
-    setInterval(refresh, 1500);
-  </script>
-</body>
-</html>`);
+    res.end(DASHBOARD_HTML);
     return;
   }
 
@@ -109,17 +156,300 @@ const server = http.createServer((req, res) => {
   res.end("Not found");
 });
 
+// ── WebSocket Server ─────────────────────────────────────────────────────────
+
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (ws, req) => {
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  let clientSource = null;
+  let isDashboard = false;
+
+  ws.on("message", (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+
+    if (msg.type === "DASHBOARD") {
+      isDashboard = true;
+      dashboardClients.add(ws);
+      // Send full snapshot immediately
+      ws.send(JSON.stringify({ type: "SNAPSHOT", ...buildDebugSnapshot() }));
+      return;
+    }
+
+    if (msg.type === "IDENTIFY") {
+      clientSource = msg.source;
+      wsClients.set(clientSource, ws);
+      clientMeta.set(clientSource, {
+        ws,
+        ip,
+        connectedAt: Date.now(),
+        lastSeenAt: Date.now(),
+        oddsUpdates: 0
+      });
+      pushLog("info", `${clientSource} connected from ${ip}`);
+      broadcastDebugSnapshot();
+      // Send current state back immediately
+      ws.send(JSON.stringify({ type: "ODDS_DATA", ...state }));
+      return;
+    }
+
+    if (msg.type === "ODDS_UPDATE") {
+      applyOddsUpdate(msg.source, msg.odds, msg.fdMaxWager ?? null);
+      const meta = clientMeta.get(msg.source);
+      if (meta) {
+        meta.lastSeenAt = Date.now();
+        meta.oddsUpdates++;
+      }
+      const oddsStr = msg.odds ?? "null";
+      pushLog("ok", `odds update from ${msg.source}: ${oddsStr}${msg.fdMaxWager != null ? ` (max $${msg.fdMaxWager})` : ""}`);
+      wsBroadcast({ type: "ODDS_DATA", ...state });
+      broadcastDebugSnapshot();
+      return;
+    }
+
+    if (msg.type === "PING") {
+      if (clientSource) {
+        const meta = clientMeta.get(clientSource);
+        if (meta) meta.lastSeenAt = Date.now();
+      }
+      ws.send(JSON.stringify({ type: "PONG" }));
+      return;
+    }
+  });
+
+  ws.on("close", () => {
+    if (isDashboard) {
+      dashboardClients.delete(ws);
+      return;
+    }
+    if (clientSource) {
+      wsClients.delete(clientSource);
+      clientMeta.delete(clientSource);
+      pushLog("warn", `${clientSource} disconnected`);
+      broadcastDebugSnapshot();
+    }
+  });
+
+  ws.on("error", () => {
+    if (isDashboard) dashboardClients.delete(ws);
+    if (clientSource) {
+      wsClients.delete(clientSource);
+      clientMeta.delete(clientSource);
+    }
+  });
+});
+
+// ── Dashboard HTML ───────────────────────────────────────────────────────────
+
+const DASHBOARD_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Arb Server — Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:monospace;background:#0b1118;color:#c9d1d9;font-size:13px;padding:24px;min-height:100vh}
+  h1{font-size:18px;color:#00c853;letter-spacing:1px;margin-bottom:4px}
+  .subtitle{font-size:11px;color:#555;margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:700px){.grid{grid-template-columns:1fr}}
+  .card{background:#161f28;border:1px solid #1e2e3e;border-radius:8px;padding:16px}
+  .card h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:12px}
+  .odds-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1a2535}
+  .odds-row:last-child{border-bottom:none}
+  .odds-label{color:#888;font-size:11px}
+  .odds-value{font-size:20px;font-weight:700;color:#fff}
+  .odds-value.empty{font-size:12px;color:#333;font-weight:400;font-style:italic}
+  .odds-value.dk{color:#f9a825}
+  .odds-value.fd{color:#4fc3f7}
+  .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px}
+  .badge.online{background:#0a2a0a;color:#00c853;border:1px solid #00c853}
+  .badge.offline{background:#2a0a0a;color:#ff5252;border:1px solid #ff5252}
+  .client-row{padding:8px 0;border-bottom:1px solid #1a2535}
+  .client-row:last-child{border-bottom:none}
+  .client-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
+  .client-name.dk{color:#f9a825}
+  .client-name.fd{color:#4fc3f7}
+  .client-meta{font-size:11px;color:#555;line-height:1.8}
+  .client-meta span{color:#888}
+  .log-wrap{background:#161f28;border:1px solid #1e2e3e;border-radius:8px;padding:16px}
+  .log-wrap h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:10px}
+  #log{height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+  .log-entry{font-size:11px;display:flex;gap:8px;padding:2px 0}
+  .log-ts{color:#333;flex-shrink:0;width:68px}
+  .log-msg.info{color:#888}
+  .log-msg.ok{color:#00c853}
+  .log-msg.warn{color:#f9a825}
+  .updated{font-size:10px;color:#333;margin-top:16px;text-align:right}
+  .ws-dot{width:7px;height:7px;border-radius:50%;background:#ff5252;display:inline-block;margin-right:5px;vertical-align:middle}
+  .ws-dot.online{background:#00c853}
+  .no-clients{font-size:11px;color:#333;font-style:italic;padding:6px 0}
+</style>
+</head>
+<body>
+<h1>ARB SERVER — DASHBOARD</h1>
+<div class="subtitle">Live debug view &nbsp;·&nbsp; auto-updates via WebSocket</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Current Odds</h2>
+    <div class="odds-row">
+      <span class="odds-label">DraftKings</span>
+      <span class="odds-value dk" id="dk-val"><span style="font-size:12px;color:#333;font-style:italic">waiting...</span></span>
+    </div>
+    <div class="odds-row">
+      <span class="odds-label">FanDuel</span>
+      <span class="odds-value fd" id="fd-val"><span style="font-size:12px;color:#333;font-style:italic">waiting...</span></span>
+    </div>
+    <div class="odds-row">
+      <span class="odds-label">FD Max Wager</span>
+      <span class="odds-value" id="max-val" style="font-size:14px"><span style="font-size:12px;color:#333;font-style:italic">—</span></span>
+    </div>
+    <div class="odds-row">
+      <span class="odds-label">Last Updated</span>
+      <span class="odds-value" id="updated-val" style="font-size:12px;color:#555"><span style="font-style:italic">—</span></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Connected Clients <span id="ws-status-badge" class="badge offline">WS disconnected</span></h2>
+    <div id="clients-container"><div class="no-clients">No clients connected</div></div>
+  </div>
+</div>
+
+<div class="log-wrap">
+  <h2>Event Log</h2>
+  <div id="log"></div>
+</div>
+
+<div class="updated">Page connected: <span class="ws-dot" id="page-ws-dot"></span><span id="page-ws-text">connecting...</span></div>
+
+<script>
+  function fmt(ts) {
+    if (!ts) return "—";
+    return new Date(ts).toLocaleTimeString();
+  }
+  function ago(ts) {
+    if (!ts) return "—";
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 5) return "just now";
+    if (s < 60) return s + "s ago";
+    return Math.floor(s/60) + "m ago";
+  }
+
+  function renderState(state) {
+    const dk = document.getElementById("dk-val");
+    const fd = document.getElementById("fd-val");
+    const mx = document.getElementById("max-val");
+    const up = document.getElementById("updated-val");
+    dk.innerHTML = state.draftkings ? state.draftkings : '<span style="font-size:12px;color:#333;font-style:italic">no odds</span>';
+    fd.innerHTML = state.fanduel    ? state.fanduel    : '<span style="font-size:12px;color:#333;font-style:italic">no odds</span>';
+    mx.innerHTML = state.fdMaxWager != null ? '$' + Number(state.fdMaxWager).toFixed(2) : '<span style="font-size:12px;color:#333;font-style:italic">—</span>';
+    up.innerHTML = state.updatedAt  ? fmt(state.updatedAt) : '<span style="font-style:italic">—</span>';
+  }
+
+  function renderClients(clients) {
+    const el = document.getElementById("clients-container");
+    const badge = document.getElementById("ws-status-badge");
+    if (!clients || clients.length === 0) {
+      el.innerHTML = '<div class="no-clients">No clients connected</div>';
+      badge.textContent = "0 clients";
+      badge.className = "badge offline";
+      return;
+    }
+    badge.textContent = clients.length + " client" + (clients.length > 1 ? "s" : "");
+    badge.className = "badge online";
+    el.innerHTML = clients.map(c => {
+      const cls = c.source === "draftkings" ? "dk" : "fd";
+      const label = c.source === "draftkings" ? "DraftKings" : "FanDuel";
+      const status = c.connected
+        ? '<span style="color:#00c853">● connected</span>'
+        : '<span style="color:#ff5252">● disconnected</span>';
+      return \`<div class="client-row">
+        <div class="client-name \${cls}">\${label} \${status}</div>
+        <div class="client-meta">
+          IP: <span>\${c.ip}</span><br>
+          Connected: <span>\${fmt(c.connectedAt)}</span><br>
+          Last seen: <span>\${ago(c.lastSeenAt)}</span><br>
+          Odds updates sent: <span>\${c.oddsUpdates}</span>
+        </div>
+      </div>\`;
+    }).join("");
+  }
+
+  function appendLog(entry) {
+    const el = document.getElementById("log");
+    const div = document.createElement("div");
+    div.className = "log-entry";
+    div.innerHTML = \`<span class="log-ts">\${fmt(entry.ts)}</span><span class="log-msg \${entry.level}">\${entry.msg}</span>\`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function renderLog(entries) {
+    const el = document.getElementById("log");
+    el.innerHTML = "";
+    for (const e of entries) appendLog(e);
+  }
+
+  // WebSocket connection to dashboard feed
+  const dot = document.getElementById("page-ws-dot");
+  const txt = document.getElementById("page-ws-text");
+
+  function connect() {
+    const ws = new WebSocket("ws://" + location.host);
+
+    ws.onopen = () => {
+      dot.className = "ws-dot online";
+      txt.textContent = "connected";
+      ws.send(JSON.stringify({ type: "DASHBOARD" }));
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "SNAPSHOT") {
+        renderState(msg.state);
+        renderClients(msg.clients);
+        renderLog(msg.eventLog);
+      }
+      if (msg.type === "LOG") {
+        appendLog(msg.entry);
+      }
+      if (msg.type === "ODDS_DATA") {
+        renderState(msg);
+      }
+    };
+
+    ws.onclose = () => {
+      dot.className = "ws-dot";
+      txt.textContent = "disconnected — reconnecting...";
+      setTimeout(connect, 3000);
+    };
+  }
+
+  connect();
+
+  // Refresh "last seen" ago timestamps every 5s
+  setInterval(() => {
+    fetch("/debug").then(r => r.json()).then(d => renderClients(d.clients));
+  }, 5000);
+</script>
+</body>
+</html>`;
+
+// ── Start ────────────────────────────────────────────────────────────────────
+
 server.listen(PORT, "0.0.0.0", () => {
   const ips = getLocalIPs();
   console.log(`\n✓ Arb LAN server running on port ${PORT}\n`);
-  console.log(`  Local:    http://localhost:${PORT}`);
-  if (ips.length === 0) {
-    console.log(`  Network:  (no network interfaces found)`);
-  } else {
+  console.log(`  Dashboard: http://localhost:${PORT}`);
+  if (ips.length > 0) {
     for (const { name, address } of ips) {
-      console.log(`  Network:  http://${address}:${PORT}  (${name})`);
+      console.log(`  Network:   http://${address}:${PORT}  (${name})`);
     }
     console.log(`\n  → Enter one of the Network addresses above into the extension popup.`);
   }
-  console.log();
+  console.log(`\n  Debug API: GET /debug\n`);
+  pushLog("ok", "server started on port " + PORT);
 });
