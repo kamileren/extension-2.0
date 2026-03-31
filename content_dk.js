@@ -404,6 +404,17 @@
       clickDkButton();
     }
 
+    if (msg.type === "BET_FD_ACTUAL") {
+      // FD was capped by max wager — recalculate DK bet to match FD's actual payout
+      const fdDec = americanToDecimal(msg.fdOdds);
+      const dkDec = americanToDecimal(msg.dkOdds);
+      if (fdDec && dkDec) {
+        const newDkBet = (msg.betFd * fdDec) / dkDec;
+        if (lockedBet) lockedBet.betDk = newDkBet;
+        fillDkInput(newDkBet);
+      }
+    }
+
     if (msg.type === "BET_CANCEL") {
       dkBetPhase = "idle";
       lockedBet = null;

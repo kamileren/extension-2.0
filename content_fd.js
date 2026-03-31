@@ -428,7 +428,38 @@
 
   function clickFdButton() {
     const btn = findFdPlaceBetButton();
-    if (btn && btn.getAttribute("aria-disabled") !== "true") btn.click();
+    if (!btn || btn.getAttribute("aria-disabled") === "true") return;
+
+    // Re-scrape max wager immediately before clicking — FD sometimes reveals
+    // a new (lower) max only once the betslip is fully loaded
+    const freshMax = scrapeMaxWager();
+    if (freshMax != null && freshMax < (stickyMax || Infinity)) {
+      stickyMax = freshMax;
+    }
+
+    // If the current max is lower than what we planned to bet, re-fill with
+    // the capped amount before clicking so FD accepts it
+    if (lockedBet && stickyMax != null && lockedBet.betFd > stickyMax) {
+      const cappedFdBet = stickyMax;
+      const dkDec = americanToDecimal(lockedBet.dkOdds);
+      const fdDec = americanToDecimal(lockedBet.fdOdds);
+      if (dkDec && fdDec) {
+        // Recalculate DK bet to match the capped FD payout
+        const newDkBet = (cappedFdBet * fdDec) / dkDec;
+        lockedBet.betFd = cappedFdBet;
+        lockedBet.betDk = newDkBet;
+        fillFdInput(cappedFdBet);
+        // Tell DK to adjust its wager to match
+        chrome.runtime.sendMessage({
+          type: "BET_FD_ACTUAL",
+          betFd: cappedFdBet,
+          fdOdds: lockedBet.fdOdds,
+          dkOdds: lockedBet.dkOdds
+        }, () => void chrome.runtime.lastError);
+      }
+    }
+
+    btn.click();
   }
 
   // Find the FanDuel betslip wager input and set its value, then fire
