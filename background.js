@@ -95,7 +95,7 @@ function connectWebSocket(url) {
     }
 
     // Forward bet coordination messages to all DK/FD tabs instantly
-    if (msg.type === "BET_FIRE" || msg.type === "BET_CANCEL" || msg.type === "BET_WAITING" || msg.type === "BET_EXECUTE") {
+    if (msg.type === "BET_CANCEL" || msg.type === "BET_WAITING" || msg.type === "BET_EXECUTE") {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (
@@ -103,6 +103,38 @@ function connectWebSocket(url) {
             (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca"))
           ) {
             chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
+          }
+        });
+      });
+    }
+
+    // BET_FIRE is handled specially — forward to all tabs, but also await
+    // the FD tab's response (which tells us location is verified) so the
+    // service worker stays alive for the entire handshake.
+    if (msg.type === "BET_FIRE") {
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (!tab.url) return;
+          const isDk = tab.url.includes("draftkings.com");
+          const isFd = tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca");
+          if (!isDk && !isFd) return;
+
+          if (isDk) {
+            // DK just receives BET_FIRE and holds — no response needed
+            chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
+          }
+
+          if (isFd) {
+            // Send BET_FIRE and wait for the FD content script to respond
+            // with { ready: true } once location is verified
+            chrome.tabs.sendMessage(tab.id, msg, (response) => {
+              if (chrome.runtime.lastError) return;
+              if (response && response.ready) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: "BET_FD_READY" }));
+                }
+              }
+            });
           }
         });
       });
@@ -171,11 +203,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
-  if (message.type === "BET_FD_READY") {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "BET_FD_READY" }));
-    }
-  }
 
   if (message.type === "GET_WS_STATUS") {
     sendResponse({

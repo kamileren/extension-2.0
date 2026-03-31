@@ -393,26 +393,25 @@
     );
   }
 
-  // Called on BET_FIRE — wait for location to clear, then tell the server we're ready.
-  // DK will not fire until server receives BET_FD_READY and re-validates the arb.
-  function waitForLocationThenSignalReady() {
+  // Called on BET_FIRE — waits for location to clear then calls sendResponse({ ready: true })
+  // so background (which is holding the sendMessage callback open) can forward to the server.
+  function waitForLocationThenSignalReady(sendResponse) {
     if (!isFdLocationPending()) {
-      // Already verified — signal immediately
-      chrome.runtime.sendMessage({ type: "BET_FD_READY" }, () => void chrome.runtime.lastError);
+      sendResponse({ ready: true });
       return;
     }
 
     const started = Date.now();
     const wait = setInterval(() => {
       if (Date.now() - started > 15000) {
-        // Timed out waiting for location — cancel the whole cycle
         clearInterval(wait);
-        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "fanduel" }, () => void chrome.runtime.lastError);
+        // Signal failure so background knows not to proceed
+        sendResponse({ ready: false });
         return;
       }
       if (isFdLocationPending()) return;
       clearInterval(wait);
-      chrome.runtime.sendMessage({ type: "BET_FD_READY" }, () => void chrome.runtime.lastError);
+      sendResponse({ ready: true });
     }, 200);
   }
 
@@ -466,7 +465,7 @@
     wagerInput.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  chrome.runtime.onMessage.addListener((msg) => {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.type === "ODDS_DATA") {
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         renderBanner(msg.draftkings, msg.fanduel, arbStake || 100, msg.fdMaxWager);
@@ -475,7 +474,10 @@
 
     if (msg.type === "BET_FIRE") {
       fdBetPhase = "idle";
-      waitForLocationThenSignalReady();
+      // Pass sendResponse so the async location wait can reply directly to background.
+      // Return true below keeps the message channel open until sendResponse is called.
+      waitForLocationThenSignalReady(sendResponse);
+      return true; // keep channel open for async response
     }
 
     if (msg.type === "BET_EXECUTE") {
