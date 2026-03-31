@@ -132,6 +132,10 @@
   let lastFilledAmount = null;
   let fdBetPhase = "idle"; // "idle" | "waiting"
 
+  // Snapshot saved at fire time so we can adjust if DK odds shift post-fire
+  let lockedBet = null;
+  // { dkOdds, fdOdds, betDk, betFd, stake }
+
   function renderBanner(dkOdds, fdOdds, stake, fdMaxWager) {
     injectStyles();
     let banner = document.getElementById("arb-banner");
@@ -476,15 +480,51 @@
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         renderBanner(msg.draftkings, msg.fanduel, arbStake || 100, msg.fdMaxWager);
       });
+
+      // Post-fire adjustment: if DK odds changed after we locked in our FD bet,
+      // recalculate FD wager so profit is still guaranteed and re-fill the input.
+      // Formula: betFd_new = (betDk_locked * dkDec_locked) / fdDec_new
+      if (lockedBet && msg.draftkings && msg.draftkings !== lockedBet.dkOdds) {
+        const fdDec = americanToDecimal(lockedBet.fdOdds);
+        const dkDecNew = americanToDecimal(msg.draftkings);
+        if (fdDec && dkDecNew) {
+          const newFdBet = (lockedBet.betDk * dkDecNew) / fdDec;
+          const newProfit = (lockedBet.betDk * dkDecNew) - (newFdBet + lockedBet.betDk);
+          if (newProfit > 0) {
+            lockedBet.dkOdds = msg.draftkings;
+            lockedBet.betFd = newFdBet;
+            setTimeout(() => fillFdInput(newFdBet), 120);
+          }
+        }
+      }
     }
 
     if (msg.type === "BET_FIRE") {
       fdBetPhase = "idle";
+      // Snapshot odds + amounts before the betslip DOM disappears
+      chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+        if (data && data.draftkings && data.fanduel) {
+          chrome.storage.local.get("arbStake", ({ arbStake }) => {
+            const stake = arbStake || 100;
+            const result = calcBets(data.draftkings, data.fanduel, stake, data.fdMaxWager);
+            if (result) {
+              lockedBet = {
+                dkOdds: data.draftkings,
+                fdOdds: data.fanduel,
+                betDk: parseFloat(result.betDk),
+                betFd: parseFloat(result.betFd),
+                stake
+              };
+            }
+          });
+        }
+      });
       clickFdButton();
     }
 
     if (msg.type === "BET_CANCEL") {
       fdBetPhase = "idle";
+      lockedBet = null;
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
           if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
