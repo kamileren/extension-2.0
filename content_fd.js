@@ -137,7 +137,7 @@
           &nbsp;|&nbsp;
           ${fdOdds ? `FD: <b>${fdOdds}</b>` : "Waiting for <b>FanDuel</b> odds..."}
         </span>
-        ${fdMax != null ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
+        ${fdMax != null && fdMax < 100000 ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
@@ -167,7 +167,7 @@
           <span class="arb-profit-value loss">No Arb</span>
           <span class="arb-profit-pct">Implied prob &gt; 100%</span>
         </div>
-        ${fdMax != null ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
+        ${fdMax != null && fdMax < 100000 ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
@@ -237,16 +237,15 @@
     const resetBtn = document.getElementById("arb-reset-max");
     if (resetBtn) {
       resetBtn.onclick = () => {
-        // Clear sticky max locally
-        stickyMax = null;
-        lastMax = null;
+        // Set sticky max to a huge number so cap never triggers
+        stickyMax = 100000;
+        lastMax = 100000;
         lastFilledAmount = null;
-        // Push null max to background so DK banner also recalculates
         chrome.runtime.sendMessage({
           type: "ODDS_UPDATE",
           source: "fanduel",
           odds: lastOdds,
-          fdMaxWager: null
+          fdMaxWager: 100000
         });
       };
     }
