@@ -172,6 +172,61 @@
     .status-dot.online { background: #00c853; }
     .status-dot.offline { background: #ff5252; }
     .status-dot.disabled { background: #444; }
+
+    .kelly-section {
+      background: #161f28;
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid #1e2e1e;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .kelly-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kelly-label { font-size: 12px; font-weight: 600; color: #ccc; }
+    .kelly-sub-label { font-size: 11px; opacity: 0.7; white-space: nowrap; }
+    .kelly-bankroll-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kelly-bankroll-row input {
+      flex: 1;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid #2a3a2a;
+      background: #0f1923;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+    }
+    .kelly-bankroll-row input:focus { border-color: #00c853; }
+    .kelly-computed {
+      font-size: 11px;
+      color: #00c853;
+      white-space: nowrap;
+      min-width: 60px;
+      text-align: right;
+    }
+    /* Toggle switch */
+    .kelly-switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+    .kelly-switch input { opacity: 0; width: 0; height: 0; }
+    .kelly-slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #2a2a2a; border-radius: 18px; transition: 0.2s;
+    }
+    .kelly-slider:before {
+      content: ""; position: absolute;
+      width: 12px; height: 12px; left: 3px; bottom: 3px;
+      background: #666; border-radius: 50%; transition: 0.2s;
+    }
+    .kelly-switch input:checked + .kelly-slider { background: #00c853; }
+    .kelly-switch input:checked + .kelly-slider:before { background: #000; transform: translateX(16px); }
   </style>
 </head>
 <body>
@@ -193,6 +248,22 @@
     <div class="stake-row">
       <label>Total Stake $</label>
       <input id="stake" type="number" min="1" value="100" />
+    </div>
+
+    <!-- Kelly toggle -->
+    <div class="kelly-section" id="kelly-section">
+      <div class="kelly-toggle-row">
+        <span class="kelly-label">½ Kelly Sizing</span>
+        <label class="kelly-switch">
+          <input type="checkbox" id="kelly-toggle" />
+          <span class="kelly-slider"></span>
+        </label>
+      </div>
+      <div class="kelly-bankroll-row" id="kelly-bankroll-row" style="display:none">
+        <span class="kelly-sub-label">Bankroll $</span>
+        <input id="bankroll" type="number" min="1" value="1000" />
+        <span class="kelly-computed" id="kelly-computed"></span>
+      </div>
     </div>
     <div id="result-container">
       <div class="waiting">Waiting for odds from both sites...</div>

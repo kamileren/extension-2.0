@@ -5,6 +5,18 @@ function americanToDecimal(american) {
   return 100 / Math.abs(n) + 1;
 }
 
+// Half Kelly stake: bankroll * (edge / 2)
+// edge = (1 / totalImplied) - 1
+function halfKellyStake(dkOdds, fdOdds, bankroll) {
+  const dkDec = americanToDecimal(dkOdds);
+  const fdDec = americanToDecimal(fdOdds);
+  if (!dkDec || !fdDec) return null;
+  const totalImplied = (1 / dkDec) + (1 / fdDec);
+  if (totalImplied >= 1) return null;
+  const edge = (1 / totalImplied) - 1;
+  return bankroll * (edge / 2);
+}
+
 function calcBets(dkOdds, fdOdds, totalStake, fdMax) {
   const dkDec = americanToDecimal(dkOdds);
   const fdDec = americanToDecimal(fdOdds);
@@ -99,12 +111,38 @@ function checkServer(serverUrl) {
 }
 
 function loadAndRender() {
-  chrome.storage.local.get(["arbStake", "serverUrl"], ({ arbStake, serverUrl }) => {
+  chrome.storage.local.get(["arbStake", "serverUrl", "kellyOn", "bankroll"], ({ arbStake, serverUrl, kellyOn, bankroll }) => {
     const stake = arbStake || 100;
+    const br = bankroll || 1000;
+    const kelly = !!kellyOn;
+
     document.getElementById("stake").value = stake;
+    document.getElementById("kelly-toggle").checked = kelly;
+    document.getElementById("bankroll").value = br;
+    document.getElementById("kelly-bankroll-row").style.display = kelly ? "flex" : "none";
+    document.getElementById("stake").readOnly = kelly;
+    document.getElementById("stake").style.opacity = kelly ? "0.4" : "1";
+
     if (serverUrl) document.getElementById("server-ip").value = serverUrl;
+
     chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-      render(data ? data.draftkings : null, data ? data.fanduel : null, stake, data ? data.fdMaxWager : null);
+      const dk = data ? data.draftkings : null;
+      const fd = data ? data.fanduel : null;
+      const fdMax = data ? data.fdMaxWager : null;
+
+      let effectiveStake = stake;
+      if (kelly && dk && fd) {
+        const ks = halfKellyStake(dk, fd, br);
+        if (ks != null) {
+          effectiveStake = ks;
+          document.getElementById("stake").value = ks.toFixed(2);
+          document.getElementById("kelly-computed").textContent = `= $${ks.toFixed(2)}`;
+        }
+      } else {
+        document.getElementById("kelly-computed").textContent = "";
+      }
+
+      render(dk, fd, effectiveStake, fdMax);
     });
     checkServer(serverUrl);
   });
@@ -116,6 +154,21 @@ document.getElementById("stake").addEventListener("change", (e) => {
   chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
     render(data ? data.draftkings : null, data ? data.fanduel : null, newStake, data ? data.fdMaxWager : null);
   });
+});
+
+document.getElementById("kelly-toggle").addEventListener("change", (e) => {
+  const kelly = e.target.checked;
+  chrome.storage.local.set({ kellyOn: kelly });
+  document.getElementById("kelly-bankroll-row").style.display = kelly ? "flex" : "none";
+  document.getElementById("stake").readOnly = kelly;
+  document.getElementById("stake").style.opacity = kelly ? "0.4" : "1";
+  loadAndRender();
+});
+
+document.getElementById("bankroll").addEventListener("change", (e) => {
+  const br = parseFloat(e.target.value) || 1000;
+  chrome.storage.local.set({ bankroll: br });
+  loadAndRender();
 });
 
 document.getElementById("server-save").addEventListener("click", () => {
