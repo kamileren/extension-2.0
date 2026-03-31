@@ -378,12 +378,53 @@
     }
   }
 
-  function clickFdButton() {
+  function findFdPlaceBetButton() {
     const buttons = Array.from(document.querySelectorAll('[role="button"]'));
-    const btn = buttons.find(b =>
+    return buttons.find(b =>
       Array.from(b.querySelectorAll("span")).some(s => /^Place .+ bet$/i.test(s.textContent.trim()))
+    ) || null;
+  }
+
+  function isFdLocationPending() {
+    const buttons = Array.from(document.querySelectorAll('[role="button"]'));
+    return buttons.some(b =>
+      b.getAttribute("aria-disabled") === "true" &&
+      Array.from(b.querySelectorAll("span")).some(s => /location not verified/i.test(s.textContent.trim()))
     );
-    if (btn) btn.click();
+  }
+
+  function clickFdButton() {
+    // If location is still being verified, wait for it to clear then re-check arb
+    if (isFdLocationPending()) {
+      const started = Date.now();
+      const wait = setInterval(() => {
+        // Give up after 15 seconds
+        if (Date.now() - started > 15000) {
+          clearInterval(wait);
+          return;
+        }
+        if (isFdLocationPending()) return; // still waiting
+
+        clearInterval(wait);
+
+        // Location cleared — re-validate arb before clicking
+        chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+          if (!data || !data.draftkings || !data.fanduel) return;
+          const dkDec = americanToDecimal(data.draftkings);
+          const fdDec = americanToDecimal(data.fanduel);
+          if (!dkDec || !fdDec) return;
+          const arbStillValid = (1 / dkDec) + (1 / fdDec) < 1;
+          if (!arbStillValid) return;
+
+          const btn = findFdPlaceBetButton();
+          if (btn && btn.getAttribute("aria-disabled") !== "true") btn.click();
+        });
+      }, 200);
+      return;
+    }
+
+    const btn = findFdPlaceBetButton();
+    if (btn && btn.getAttribute("aria-disabled") !== "true") btn.click();
   }
 
   // Find the FanDuel betslip wager input and set its value, then fire
