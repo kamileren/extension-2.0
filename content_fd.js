@@ -103,6 +103,12 @@
         font-size: 16px; padding: 2px 6px; line-height: 1;
       }
       .arb-close-btn:hover { color: #fff; }
+      .arb-reset-max-btn {
+        background: #3a1a00; border: 1px solid #ff9800; color: #ff9800;
+        cursor: pointer; font-size: 10px; font-weight: 700; padding: 3px 7px;
+        border-radius: 4px; letter-spacing: 0.5px; white-space: nowrap;
+      }
+      .arb-reset-max-btn:hover { background: #ff9800; color: #000; }
     `;
     document.head.appendChild(style);
   }
@@ -131,6 +137,7 @@
           &nbsp;|&nbsp;
           ${fdOdds ? `FD: <b>${fdOdds}</b>` : "Waiting for <b>FanDuel</b> odds..."}
         </span>
+        ${fdMax != null ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
@@ -160,6 +167,7 @@
           <span class="arb-profit-value loss">No Arb</span>
           <span class="arb-profit-pct">Implied prob &gt; 100%</span>
         </div>
+        ${fdMax != null ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
@@ -201,6 +209,7 @@
           <span class="arb-profit-value">+$${result.profit}</span>
           <span class="arb-profit-pct">${stakeNote}</span>
         </div>
+        ${fdMax != null ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
@@ -224,6 +233,24 @@
         document.body.style.marginTop = "";
       };
     }
+
+    const resetBtn = document.getElementById("arb-reset-max");
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        // Clear sticky max locally
+        stickyMax = null;
+        lastMax = null;
+        lastFilledAmount = null;
+        // Push null max to background so DK banner also recalculates
+        chrome.runtime.sendMessage({
+          type: "ODDS_UPDATE",
+          source: "fanduel",
+          odds: lastOdds,
+          fdMaxWager: null
+        });
+      };
+    }
+
     const input = document.getElementById("arb-stake-input");
     if (input) {
       input.addEventListener("change", () => {

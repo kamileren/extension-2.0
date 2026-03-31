@@ -84,7 +84,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "ODDS_UPDATE") {
     oddsData[message.source] = message.odds;
     if (message.source === "fanduel") {
-      if (message.fdMaxWager != null) oddsData.fdMaxWager = message.fdMaxWager;
+      // Allow explicit null to clear the sticky max (reset button)
+      if (message.hasOwnProperty("fdMaxWager")) {
+        if (message.fdMaxWager != null) {
+          oddsData.fdMaxWager = message.fdMaxWager;
+        } else if (message.fdMaxWager === null) {
+          oddsData.fdMaxWager = null;
+        }
+      }
     }
     broadcast();
     // Push to server so the other device sees it
