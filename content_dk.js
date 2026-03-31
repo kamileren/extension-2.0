@@ -296,7 +296,26 @@
 
   function clickDkButton() {
     const btn = document.querySelector('[test-dataid="betslip-place-bet-button"]');
-    if (btn) btn.click();
+    if (!btn) return;
+
+    const isOddsChange = btn.classList.contains("error-state");
+    btn.click();
+
+    if (isOddsChange) {
+      // First click accepted the odds change — wait for DK to swap the button
+      // back to "Place Bet" then click again
+      const waited = Date.now();
+      const poll = setInterval(() => {
+        const btn2 = document.querySelector('[test-dataid="betslip-place-bet-button"]');
+        if (!btn2) { clearInterval(poll); return; }
+        // Give up after 3 seconds
+        if (Date.now() - waited > 3000) { clearInterval(poll); return; }
+        if (!btn2.classList.contains("error-state")) {
+          clearInterval(poll);
+          btn2.click();
+        }
+      }, 100);
+    }
   }
 
   // Auto-fill the DK betslip wager input.
