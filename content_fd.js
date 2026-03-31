@@ -209,7 +209,7 @@
           <span class="arb-profit-value">+$${result.profit}</span>
           <span class="arb-profit-pct">${stakeNote}</span>
         </div>
-        ${fdMax != null ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
+        ${fdMax != null && fdMax < 100000 ? `<button class="arb-reset-max-btn" id="arb-reset-max">RESET MAX $${fdMax}</button>` : ""}
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
       </div>`;
