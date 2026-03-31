@@ -287,7 +287,7 @@
     if (placeBetBtn) {
       placeBetBtn.onclick = () => {
         fdBetPhase = "waiting";
-        chrome.runtime.sendMessage({ type: "BET_INTENT", source: "fanduel" }, () => void chrome.runtime.lastError);
+        sendIntentWhenReady();
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
             if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
@@ -393,29 +393,35 @@
     );
   }
 
-  // Called on BET_FIRE — waits for location to clear then calls sendResponse({ ready: true })
-  // so background (which is holding the sendMessage callback open) can forward to the server.
-  function waitForLocationThenSignalReady(sendResponse) {
+  // When FD Place Bet is pressed: wait for location to be verified, then
+  // send BET_INTENT to the server. This means the server only receives FD's
+  // intent once FD is actually ready to fire.
+  function sendIntentWhenReady() {
     if (!isFdLocationPending()) {
-      sendResponse({ ready: true });
+      chrome.runtime.sendMessage({ type: "BET_INTENT", source: "fanduel" }, () => void chrome.runtime.lastError);
       return;
     }
 
     const started = Date.now();
     const wait = setInterval(() => {
-      if (Date.now() - started > 15000) {
+      if (Date.now() - started > 30000) {
+        // Timed out waiting for location — cancel
         clearInterval(wait);
-        // Signal failure so background knows not to proceed
-        sendResponse({ ready: false });
+        fdBetPhase = "idle";
+        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "fanduel" }, () => void chrome.runtime.lastError);
+        chrome.storage.local.get("arbStake", ({ arbStake }) => {
+          chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
+            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+          });
+        });
         return;
       }
       if (isFdLocationPending()) return;
       clearInterval(wait);
-      sendResponse({ ready: true });
+      chrome.runtime.sendMessage({ type: "BET_INTENT", source: "fanduel" }, () => void chrome.runtime.lastError);
     }, 200);
   }
 
-  // Called on BET_EXECUTE — arb re-validated by server, actually click the button.
   function clickFdButton() {
     const btn = findFdPlaceBetButton();
     if (btn && btn.getAttribute("aria-disabled") !== "true") btn.click();
@@ -465,7 +471,7 @@
     wagerInput.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "ODDS_DATA") {
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         renderBanner(msg.draftkings, msg.fanduel, arbStake || 100, msg.fdMaxWager);
@@ -474,13 +480,6 @@
 
     if (msg.type === "BET_FIRE") {
       fdBetPhase = "idle";
-      // Pass sendResponse so the async location wait can reply directly to background.
-      // Return true below keeps the message channel open until sendResponse is called.
-      waitForLocationThenSignalReady(sendResponse);
-      return true; // keep channel open for async response
-    }
-
-    if (msg.type === "BET_EXECUTE") {
       clickFdButton();
     }
 

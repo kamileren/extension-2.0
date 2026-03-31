@@ -271,35 +271,12 @@ wss.on("connection", (ws, req) => {
           resetBetState();
         } else {
           betState.phase = "firing";
-          pushLog("ok", "BET_FIRE — waiting for FD location confirmation");
+          pushLog("ok", "BET_FIRE — arb confirmed, firing both sides");
           wsBroadcast({ type: "BET_FIRE" });
-          // Give FD up to 20s to verify location before timing out the whole cycle
-          betState.timeoutHandle = setTimeout(() => {
-            pushLog("warn", "BET_FIRE: FD location confirmation timed out");
-            wsBroadcast({ type: "BET_CANCEL", reason: "timeout" });
-            resetBetState();
-            broadcastDebugSnapshot();
-          }, 20000);
+          setTimeout(() => { resetBetState(); broadcastDebugSnapshot(); }, 3000);
         }
         broadcastDebugSnapshot();
       }
-
-    if (msg.type === "BET_FD_READY") {
-      if (betState.phase !== "firing") return;
-      clearTimeout(betState.timeoutHandle);
-      betState.timeoutHandle = null;
-      if (!serverArbValid()) {
-        pushLog("warn", "BET_FD_READY: arb no longer valid — cancelling");
-        wsBroadcast({ type: "BET_CANCEL", reason: "no_arb" });
-        resetBetState();
-      } else {
-        pushLog("ok", "BET_EXECUTE — FD location verified, executing both sides");
-        wsBroadcast({ type: "BET_EXECUTE" });
-        setTimeout(() => { resetBetState(); broadcastDebugSnapshot(); }, 3000);
-      }
-      broadcastDebugSnapshot();
-      return;
-    }
       return;
     }
 
