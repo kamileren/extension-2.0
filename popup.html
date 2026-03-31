@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arb Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 320px;
+      background: #0f1923;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+    }
+    .header {
+      background: linear-gradient(135deg, #0d2b0d, #1a3d1a);
+      padding: 14px 16px;
+      border-bottom: 2px solid #00c853;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header h1 { font-size: 16px; font-weight: 800; color: #00c853; letter-spacing: 1px; }
+    .header p { font-size: 11px; opacity: 0.6; }
+    .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+    .site-row {
+      background: #161f28;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #1e2e1e;
+    }
+    .site-row label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.6;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .site-row.dk label { color: #f9a825; }
+    .site-row.fd label { color: #4fc3f7; }
+    .odds-display {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      min-height: 36px;
+    }
+    .odds-empty { font-size: 13px; opacity: 0.4; font-weight: 400; font-style: italic; }
+
+    .stake-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stake-row label { font-size: 12px; opacity: 0.7; white-space: nowrap; }
+    .stake-row input {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #2a3a2a;
+      background: #161f28;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      outline: none;
+    }
+    .stake-row input:focus { border-color: #00c853; }
+
+    .result-box {
+      background: #0a1f0a;
+      border: 1px solid #00c853;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .result-box.no-arb { border-color: #ff5252; background: #1f0a0a; }
+    .result-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px; }
+    .result-profit { font-size: 26px; font-weight: 800; color: #00e676; }
+    .result-profit.loss { color: #ff5252; }
+    .result-detail { font-size: 11px; color: #00c853; margin-top: 4px; opacity: 0.8; }
+    .bet-split {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 8px;
+    }
+    .bet-item {
+      flex: 1;
+      background: #161f28;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+    .bet-item-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; margin-bottom: 4px; }
+    .bet-item-label.dk { color: #f9a825; }
+    .bet-item-label.fd { color: #4fc3f7; }
+    .bet-item-amount { font-size: 18px; font-weight: 700; color: #fff; }
+
+    .waiting { text-align: center; padding: 10px; opacity: 0.5; font-style: italic; font-size: 12px; }
+
+    .clear-btn {
+      width: 100%;
+      padding: 8px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #666;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .clear-btn:hover { background: #222; color: #999; }
+
+    .server-section {
+      background: #161f28;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #1e2e1e;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .server-section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+    .server-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .server-row input {
+      flex: 1;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid #2a3a2a;
+      background: #0f1923;
+      color: #fff;
+      font-size: 12px;
+      outline: none;
+      font-family: monospace;
+    }
+    .server-row input:focus { border-color: #00c853; }
+    .server-row input.error { border-color: #ff5252; }
+    .server-save-btn {
+      padding: 5px 10px;
+      background: #00c853;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .server-save-btn:hover { background: #00e676; }
+    .server-status {
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #444;
+      flex-shrink: 0;
+    }
+    .status-dot.online { background: #00c853; }
+    .status-dot.offline { background: #ff5252; }
+    .status-dot.disabled { background: #444; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>ARB CALCULATOR</h1>
+      <p>DraftKings &amp; FanDuel</p>
+    </div>
+  </div>
+  <div class="body">
+    <div class="site-row dk">
+      <label>DraftKings Odds</label>
+      <div class="odds-display" id="dk-odds"><span class="odds-empty">Open DraftKings tab...</span></div>
+    </div>
+    <div class="site-row fd">
+      <label>FanDuel Odds</label>
+      <div class="odds-display" id="fd-odds"><span class="odds-empty">Open FanDuel tab...</span></div>
+    </div>
+    <div class="stake-row">
+      <label>Total Stake $</label>
+      <input id="stake" type="number" min="1" value="100" />
+    </div>
+    <div id="result-container">
+      <div class="waiting">Waiting for odds from both sites...</div>
+    </div>
+
+    <!-- LAN Server Settings -->
+    <div class="server-section">
+      <span class="server-section-title">LAN Sync (optional)</span>
+      <div class="server-row">
+        <input id="server-ip" type="text" placeholder="192.168.x.x:7429" spellcheck="false" />
+        <button class="server-save-btn" id="server-save">Save</button>
+      </div>
+      <div class="server-status">
+        <div class="status-dot disabled" id="status-dot"></div>
+        <span id="status-text">Not configured — single device mode</span>
+      </div>
+    </div>
+
+    <button class="clear-btn" id="clear-btn">Clear Stored Odds</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
