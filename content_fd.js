@@ -393,36 +393,31 @@
     );
   }
 
-  function clickFdButton() {
-    // If location is still being verified, wait for it to clear then re-check arb
-    if (isFdLocationPending()) {
-      const started = Date.now();
-      const wait = setInterval(() => {
-        // Give up after 15 seconds
-        if (Date.now() - started > 15000) {
-          clearInterval(wait);
-          return;
-        }
-        if (isFdLocationPending()) return; // still waiting
-
-        clearInterval(wait);
-
-        // Location cleared — re-validate arb before clicking
-        chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-          if (!data || !data.draftkings || !data.fanduel) return;
-          const dkDec = americanToDecimal(data.draftkings);
-          const fdDec = americanToDecimal(data.fanduel);
-          if (!dkDec || !fdDec) return;
-          const arbStillValid = (1 / dkDec) + (1 / fdDec) < 1;
-          if (!arbStillValid) return;
-
-          const btn = findFdPlaceBetButton();
-          if (btn && btn.getAttribute("aria-disabled") !== "true") btn.click();
-        });
-      }, 200);
+  // Called on BET_FIRE — wait for location to clear, then tell the server we're ready.
+  // DK will not fire until server receives BET_FD_READY and re-validates the arb.
+  function waitForLocationThenSignalReady() {
+    if (!isFdLocationPending()) {
+      // Already verified — signal immediately
+      chrome.runtime.sendMessage({ type: "BET_FD_READY" }, () => void chrome.runtime.lastError);
       return;
     }
 
+    const started = Date.now();
+    const wait = setInterval(() => {
+      if (Date.now() - started > 15000) {
+        // Timed out waiting for location — cancel the whole cycle
+        clearInterval(wait);
+        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "fanduel" }, () => void chrome.runtime.lastError);
+        return;
+      }
+      if (isFdLocationPending()) return;
+      clearInterval(wait);
+      chrome.runtime.sendMessage({ type: "BET_FD_READY" }, () => void chrome.runtime.lastError);
+    }, 200);
+  }
+
+  // Called on BET_EXECUTE — arb re-validated by server, actually click the button.
+  function clickFdButton() {
     const btn = findFdPlaceBetButton();
     if (btn && btn.getAttribute("aria-disabled") !== "true") btn.click();
   }
@@ -480,6 +475,10 @@
 
     if (msg.type === "BET_FIRE") {
       fdBetPhase = "idle";
+      waitForLocationThenSignalReady();
+    }
+
+    if (msg.type === "BET_EXECUTE") {
       clickFdButton();
     }
 

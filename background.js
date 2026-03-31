@@ -95,7 +95,7 @@ function connectWebSocket(url) {
     }
 
     // Forward bet coordination messages to all DK/FD tabs instantly
-    if (msg.type === "BET_FIRE" || msg.type === "BET_CANCEL" || msg.type === "BET_WAITING") {
+    if (msg.type === "BET_FIRE" || msg.type === "BET_CANCEL" || msg.type === "BET_WAITING" || msg.type === "BET_EXECUTE") {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (
@@ -168,6 +168,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "BET_CANCEL") {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: "BET_CANCEL", source: message.source }));
+    }
+  }
+
+  if (message.type === "BET_FD_READY") {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "BET_FD_READY" }));
     }
   }
 
