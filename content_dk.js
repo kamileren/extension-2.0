@@ -243,7 +243,7 @@
     if (placeBetBtn) {
       placeBetBtn.onclick = () => {
         dkBetPhase = "waiting";
-        chrome.runtime.sendMessage({ type: "BET_INTENT", source: "draftkings" });
+        chrome.runtime.sendMessage({ type: "BET_INTENT", source: "draftkings" }, () => void chrome.runtime.lastError);
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
             if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
@@ -256,7 +256,7 @@
     if (cancelBetBtn) {
       cancelBetBtn.onclick = () => {
         dkBetPhase = "idle";
-        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "draftkings" });
+        chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "draftkings" }, () => void chrome.runtime.lastError);
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
             if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);

@@ -61,10 +61,9 @@ function connectWebSocket(url) {
 
   ws.onopen = () => {
     wsIdentified = true;
-    // Tell the server we are connected (no single-source identity at bg level —
-    // bg acts as a relay, not a sportsbook. Send null source so server still
-    // broadcasts state back to us)
-    ws.send(JSON.stringify({ type: "IDENTIFY", source: "background" }));
+    // Use a unique ID per device so two backgrounds don't collide on the server
+    const deviceId = "background-" + Math.random().toString(36).slice(2, 8);
+    ws.send(JSON.stringify({ type: "IDENTIFY", source: deviceId }));
   };
 
   ws.onmessage = (event) => {

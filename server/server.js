@@ -54,15 +54,19 @@ function pushLog(level, msg) {
 
 // ── WebSocket helpers ────────────────────────────────────────────────────────
 
-// Extension clients (DK/FD)
-const wsClients = new Map(); // source -> ws
+// All extension clients — used for broadcasting (one entry per connected device)
+const wsClients = new Set();
+
+// source -> metadata (for dashboard display and odds tracking)
+// source is now a unique device ID like "background-x7k2m1"
+// clientMeta still also holds sportsbook-sourced entries for odds tracking
 
 // Browser dashboard clients (the status page)
 const dashboardClients = new Set();
 
 function wsBroadcast(data) {
   const msg = JSON.stringify(data);
-  for (const ws of wsClients.values()) {
+  for (const ws of wsClients) {
     if (ws.readyState === ws.OPEN) ws.send(msg);
   }
 }
@@ -208,7 +212,7 @@ wss.on("connection", (ws, req) => {
 
     if (msg.type === "IDENTIFY") {
       clientSource = msg.source;
-      wsClients.set(clientSource, ws);
+      wsClients.add(ws);
       clientMeta.set(clientSource, {
         ws,
         ip,
@@ -301,7 +305,7 @@ wss.on("connection", (ws, req) => {
       return;
     }
     if (clientSource) {
-      wsClients.delete(clientSource);
+      wsClients.delete(ws);
       clientMeta.delete(clientSource);
       pushLog("warn", `${clientSource} disconnected`);
       // Cancel any in-flight bet cycle if a participant dropped
@@ -317,7 +321,7 @@ wss.on("connection", (ws, req) => {
   ws.on("error", () => {
     if (isDashboard) dashboardClients.delete(ws);
     if (clientSource) {
-      wsClients.delete(clientSource);
+      wsClients.delete(ws);
       clientMeta.delete(clientSource);
     }
   });
