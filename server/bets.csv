@@ -1,0 +1,3 @@
+timestamp,site,status,totalWagered,totalPotentialPayout,wager,odds,toWin,totalPayout,betId,selection
+2026-04-01T01:15:31.857Z,draftkings,placed,$47.00 CAD,$79.41 CAD,,,,,,
+2026-04-01T01:15:30.522Z,fanduel,placed,,,$29.00,+168,$48.72,$77.72,BET ID: O/1333990/0000151,"Brandon Williams, To Record 4+ Rebounds, , +168, Dallas Mavericks @ Milwaukee Bucks, 8:11pm ET"

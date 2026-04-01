@@ -10,7 +10,7 @@ const os = require("os");
 const { WebSocketServer } = require("ws");
 
 const CSV_PATH = path.join(__dirname, "bets.csv");
-const CSV_HEADERS = ["timestamp", "site", "status", "totalWagered", "totalPotentialPayout", "wager", "odds", "toWin", "totalPayout", "betId", "selection"];
+const CSV_HEADERS = ["timestamp", "site", "status", "wager", "odds", "toWin", "totalPayout", "betId", "selection"];
 
 function escapeCsv(v) {
   if (v == null) return "";
@@ -18,12 +18,65 @@ function escapeCsv(v) {
   return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+// Parse a dollar string like "$104.00 CAD" or "$95.00" → number
+function parseMoney(s) {
+  if (s == null) return null;
+  const m = String(s).replace(/[^0-9.]/g, "");
+  const n = parseFloat(m);
+  return isNaN(n) ? null : n;
+}
+
+// Decimal odds → American odds string e.g. 1.9523 → "-210"
+function decimalToAmerican(dec) {
+  if (dec == null || dec <= 1) return null;
+  const n = dec >= 2
+    ? Math.round((dec - 1) * 100)
+    : Math.round(-100 / (dec - 1));
+  return n > 0 ? "+" + n : String(n);
+}
+
+function normalizeBetRow(row) {
+  let wager, odds, toWin, totalPayout, betId, selection;
+
+  if (row.site === "draftkings") {
+    wager = parseMoney(row.totalWagered);
+    totalPayout = parseMoney(row.totalPotentialPayout);
+    toWin = (wager != null && totalPayout != null) ? +(totalPayout - wager).toFixed(2) : null;
+    // decimal odds = totalPayout / wager → convert to american
+    const dec = (wager && totalPayout) ? totalPayout / wager : null;
+    odds = decimalToAmerican(dec);
+    betId = null;
+    selection = null;
+  } else {
+    // fanduel
+    wager = parseMoney(row.wager);
+    toWin = parseMoney(row.toWin);
+    totalPayout = parseMoney(row.totalPayout);
+    odds = row.odds || null;
+    betId = row.betId || null;
+    selection = row.selection || null;
+  }
+
+  return {
+    timestamp: row.timestamp || null,
+    site: row.site || null,
+    status: row.status || null,
+    wager: wager != null ? wager.toFixed(2) : null,
+    odds,
+    toWin: toWin != null ? toWin.toFixed(2) : null,
+    totalPayout: totalPayout != null ? totalPayout.toFixed(2) : null,
+    betId,
+    selection
+  };
+}
+
 function appendBetToCsv(row) {
+  const normalized = normalizeBetRow(row);
   const exists = fs.existsSync(CSV_PATH);
   if (!exists) {
     fs.writeFileSync(CSV_PATH, CSV_HEADERS.join(",") + "\n", "utf8");
   }
-  const line = CSV_HEADERS.map(k => escapeCsv(row[k])).join(",") + "\n";
+  const line = CSV_HEADERS.map(k => escapeCsv(normalized[k])).join(",") + "\n";
   fs.appendFileSync(CSV_PATH, line, "utf8");
 }
 
