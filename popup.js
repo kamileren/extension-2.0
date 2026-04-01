@@ -185,5 +185,43 @@ document.getElementById("clear-btn").addEventListener("click", () => {
   setTimeout(loadAndRender, 100);
 });
 
+document.getElementById("csv-btn").addEventListener("click", () => {
+  chrome.storage.local.get("betLog", ({ betLog }) => {
+    const log = betLog || [];
+    if (log.length === 0) {
+      alert("No bets logged yet.");
+      return;
+    }
+
+    // Collect all unique keys across all rows, timestamp first, site second
+    const allKeys = ["timestamp", "site", "status"];
+    log.forEach(row => {
+      Object.keys(row).forEach(k => {
+        if (!allKeys.includes(k)) allKeys.push(k);
+      });
+    });
+
+    const escape = (v) => {
+      if (v == null) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const lines = [allKeys.join(",")];
+    log.forEach(row => {
+      lines.push(allKeys.map(k => escape(row[k])).join(","));
+    });
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `arb_bets_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+});
+
 loadAndRender();
 setInterval(loadAndRender, 2000);

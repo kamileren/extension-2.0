@@ -173,6 +173,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "BET_CONFIRMED") {
     console.log(`[ARB] Bet confirmed on ${message.site}:`, message);
+    chrome.storage.local.get("betLog", ({ betLog }) => {
+      const log = betLog || [];
+      log.push(message);
+      chrome.storage.local.set({ betLog: log });
+    });
   }
 
   if (message.type === "BET_FD_ACTUAL") {
