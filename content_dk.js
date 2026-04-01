@@ -340,6 +340,36 @@
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  let dkConfirmationObserver = null;
+
+  function scrapeDkBetConfirmation() {
+    const receipt = document.querySelector('[data-testid="dk-betslip-receipt"]');
+    if (!receipt) return null;
+    const titleEl = receipt.querySelector('[data-testid="dk-betslip-receipt-header-title"] span');
+    if (!titleEl || titleEl.textContent.trim() !== "Bet Placed") return null;
+    const wageredEl = receipt.querySelector('[data-testid="receipt-total-wagered"]');
+    const payoutEl = receipt.querySelector('[data-testid="receipt-total-potential-payout"]');
+    return {
+      site: "draftkings", status: "placed",
+      totalWagered: wageredEl ? wageredEl.textContent.trim() : null,
+      totalPotentialPayout: payoutEl ? payoutEl.textContent.trim() : null,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  function watchForDkConfirmation() {
+    if (dkConfirmationObserver) return;
+    dkConfirmationObserver = new MutationObserver(() => {
+      const result = scrapeDkBetConfirmation();
+      if (!result) return;
+      dkConfirmationObserver.disconnect();
+      dkConfirmationObserver = null;
+      console.log("[ARB] DraftKings bet confirmed:", result);
+      chrome.runtime.sendMessage({ type: "BET_CONFIRMED", ...result }, () => void chrome.runtime.lastError);
+    });
+    dkConfirmationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   let lastOdds = null;
   let lastPollOdds = null;
 
@@ -401,6 +431,7 @@
           });
         }
       });
+      watchForDkConfirmation();
       clickDkButton();
     }
 
