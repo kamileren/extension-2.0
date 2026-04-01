@@ -4,8 +4,28 @@
 // Find your local IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
 
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const os = require("os");
 const { WebSocketServer } = require("ws");
+
+const CSV_PATH = path.join(__dirname, "bets.csv");
+const CSV_HEADERS = ["timestamp", "site", "status", "totalWagered", "totalPotentialPayout", "wager", "odds", "toWin", "totalPayout", "betId", "selection"];
+
+function escapeCsv(v) {
+  if (v == null) return "";
+  const s = String(v);
+  return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function appendBetToCsv(row) {
+  const exists = fs.existsSync(CSV_PATH);
+  if (!exists) {
+    fs.writeFileSync(CSV_PATH, CSV_HEADERS.join(",") + "\n", "utf8");
+  }
+  const line = CSV_HEADERS.map(k => escapeCsv(row[k])).join(",") + "\n";
+  fs.appendFileSync(CSV_PATH, line, "utf8");
+}
 
 const PORT = 80;
 
@@ -178,6 +198,19 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // GET /bets.csv — download combined bet log
+  if (req.method === "GET" && req.url === "/bets.csv") {
+    if (!fs.existsSync(CSV_PATH)) {
+      res.writeHead(200, { "Content-Type": "text/csv", "Content-Disposition": "attachment; filename=\"bets.csv\"" });
+      res.end(CSV_HEADERS.join(",") + "\n");
+      return;
+    }
+    const csv = fs.readFileSync(CSV_PATH, "utf8");
+    res.writeHead(200, { "Content-Type": "text/csv", "Content-Disposition": "attachment; filename=\"bets.csv\"" });
+    res.end(csv);
+    return;
+  }
+
   // GET / — dashboard
   if (req.method === "GET" && req.url === "/") {
     res.writeHead(200, { "Content-Type": "text/html" });
@@ -285,6 +318,13 @@ wss.on("connection", (ws, req) => {
       pushLog("warn", `BET_CANCEL requested by ${msg.source}`);
       wsBroadcast({ type: "BET_CANCEL", reason: "user_cancelled" });
       resetBetState();
+      broadcastDebugSnapshot();
+      return;
+    }
+
+    if (msg.type === "BET_CONFIRMED") {
+      pushLog("ok", `BET_CONFIRMED from ${msg.site}: wagered=${msg.totalWagered || msg.wager || "?"}`);
+      appendBetToCsv(msg);
       broadcastDebugSnapshot();
       return;
     }
