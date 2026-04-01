@@ -506,6 +506,58 @@
     wagerInput.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  // ---- Bet confirmation scraping ----
+  function scrapeFdBetConfirmation() {
+    // Trigger: span with exact text "Straight bet placed!"
+    const spans = Array.from(document.querySelectorAll("span"));
+    const placed = spans.find(s => s.textContent.trim() === "Straight bet placed!");
+    if (!placed) return null;
+
+    const getText = (ariaLabel) => {
+      const el = document.querySelector(`[aria-label^="${ariaLabel}"]`);
+      if (!el) return null;
+      // Value is in the aria-label itself: e.g. "Wager $95.00"
+      return el.getAttribute("aria-label").replace(ariaLabel, "").trim();
+    };
+
+    const betIdEl = spans.find(s => s.textContent.trim().startsWith("BET ID:"));
+    const selectionEl = document.querySelector("[aria-label*=\" @ \"]") ||
+                        document.querySelector("[aria-label*=\"Spread\"]") ||
+                        document.querySelector("[aria-label*=\"Moneyline\"]") ||
+                        document.querySelector("[aria-label*=\"Total\"]");
+
+    return {
+      site: "fanduel",
+      status: "placed",
+      betId: betIdEl ? betIdEl.textContent.trim() : null,
+      selection: selectionEl ? selectionEl.getAttribute("aria-label") : null,
+      wager: getText("Wager "),
+      odds: getText("Odds "),
+      toWin: getText("To win "),
+      totalPayout: getText("Total payout "),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  let fdConfirmationObserver = null;
+
+  function watchForFdConfirmation() {
+    if (fdConfirmationObserver) return; // already watching
+
+    fdConfirmationObserver = new MutationObserver(() => {
+      const result = scrapeFdBetConfirmation();
+      if (!result) return;
+
+      fdConfirmationObserver.disconnect();
+      fdConfirmationObserver = null;
+
+      console.log("[ARB] FanDuel bet confirmed:", result);
+      chrome.runtime.sendMessage({ type: "BET_CONFIRMED", ...result }, () => void chrome.runtime.lastError);
+    });
+
+    fdConfirmationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "ODDS_DATA") {
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
@@ -550,6 +602,7 @@
           });
         }
       });
+      watchForFdConfirmation();
       clickFdButton();
     }
 

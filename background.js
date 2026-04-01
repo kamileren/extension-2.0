@@ -171,6 +171,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
+  if (message.type === "BET_CONFIRMED") {
+    console.log(`[ARB] Bet confirmed on ${message.site}:`, message);
+  }
+
   if (message.type === "BET_FD_ACTUAL") {
     // FD content script is telling us the real bet amount after max wager cap.
     // Forward directly to DK tabs so DK can adjust its wager immediately.
