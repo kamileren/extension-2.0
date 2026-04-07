@@ -90,6 +90,10 @@ function connectWebSocket(url) {
         oddsData.fanduel = msg.fanduel;
         changed = true;
       }
+      if (msg.betrivers !== oddsData.betrivers) {
+        oddsData.betrivers = msg.betrivers;
+        changed = true;
+      }
       if (msg.fdMaxWager != null && msg.fdMaxWager !== oddsData.fdMaxWager) {
         oddsData.fdMaxWager = msg.fdMaxWager;
         changed = true;
