@@ -11,8 +11,8 @@
   }
   // Pick whichever opponent odds are available: BetRivers first, then FanDuel.
   function pickOpponent(data) {
-    if (data && data.betrivers) return { odds: data.betrivers, site: "betrivers", fdMaxWager: null };
-    if (data && data.fanduel)   return { odds: data.fanduel,   site: "fanduel",   fdMaxWager: data.fdMaxWager };
+    if (data && data.betrivers) return { odds: data.betrivers, site: "betrivers", fdMaxWager: null, lineInfo: data.brLine || null };
+    if (data && data.fanduel)   return { odds: data.fanduel,   site: "fanduel",   fdMaxWager: data.fdMaxWager, lineInfo: data.fdLine || null };
     return null;
   }
 
@@ -114,10 +114,32 @@
       }
       .arb-bet-cancel-btn:hover { background: #ff5252; color: #000; }
       @keyframes arb-pulse { from { opacity: 1; } to { opacity: 0.4; } }
+      .arb-middle-warning {
+        width: 100%; background: #ff6f00; color: #000; font-weight: 800;
+        font-size: 12px; text-align: center; padding: 4px 16px; letter-spacing: 0.5px;
+      }
     `;
   }
 
-  function renderBanner(dkOdds, oppOdds, stake, fdMaxWager, oppSite) {
+  // Detect a middle: both sides are Over/Under totals on opposing directions
+  // with different lines. E.g. DK Over 131.5 vs BR Under 132.5 — score of 132 wins both.
+  // Returns a warning string or null.
+  function detectMiddle(dkLine, oppLine) {
+    if (!dkLine || !oppLine) return null;
+    if (!dkLine.direction || !oppLine.direction) return null;
+    // Same direction = normal arb, no middle risk
+    if (dkLine.direction === oppLine.direction) return null;
+    // Opposing directions (one Over, one Under)
+    const overLine  = dkLine.direction === "Over"  ? dkLine.line  : oppLine.line;
+    const underLine = dkLine.direction === "Under" ? dkLine.line  : oppLine.line;
+    // A middle exists when Over line < Under line — a score between them wins both
+    if (overLine < underLine) {
+      return `MIDDLE RISK: Over ${overLine} / Under ${underLine} — score ${overLine}–${underLine - 0.5} wins both bets`;
+    }
+    return null;
+  }
+
+  function renderBanner(dkOdds, oppOdds, stake, fdMaxWager, oppSite, dkLine, oppLine) {
     injectStyles();
     let banner = document.getElementById("arb-banner");
     if (!banner) {
@@ -133,6 +155,8 @@
     const oppLabel = oppSite === "betrivers" ? "BetRivers" : "FanDuel";
     const oppClass = oppSite === "betrivers" ? "arb-site-br" : "arb-site-fd";
     const oppShort = oppSite === "betrivers" ? "BR" : "FD";
+    const middleWarning = detectMiddle(dkLine, oppLine);
+    const middleHTML = middleWarning ? `<div class="arb-middle-warning">⚠ ${middleWarning}</div>` : "";
 
     if (!dkOdds || !oppOdds) {
       banner.className = "";
@@ -154,7 +178,7 @@
 
     if (!result) {
       banner.className = "no-arb";
-      banner.innerHTML = `<div id="arb-banner-inner">
+      banner.innerHTML = `${middleHTML}<div id="arb-banner-inner">
         <span class="arb-logo">ARB CALC</span>
         <div class="arb-odds-group">
           <div class="arb-site arb-site-dk">
@@ -191,7 +215,7 @@
       }
 
       banner.className = "";
-      banner.innerHTML = `<div id="arb-banner-inner">
+      banner.innerHTML = `${middleHTML}<div id="arb-banner-inner">
         <span class="arb-logo">ARB ✓</span>
         <div class="arb-odds-group">
           <div class="arb-site arb-site-dk">
@@ -246,7 +270,7 @@
         chrome.storage.local.set({ arbStake: newStake });
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
           const opp = pickOpponent(data);
-          if (data) renderBanner(data.draftkings, opp ? opp.odds : null, newStake, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
+          if (data) renderBanner(data.draftkings, opp ? opp.odds : null, newStake, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel", data.dkLine || null, opp ? opp.lineInfo : null);
         });
       });
     }
@@ -259,7 +283,7 @@
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
             const opp = pickOpponent(data);
-            if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
+            if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel", data.dkLine || null, opp ? opp.lineInfo : null);
           });
         });
       };
@@ -273,14 +297,14 @@
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
             const opp = pickOpponent(data);
-            if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
+            if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel", data.dkLine || null, opp ? opp.lineInfo : null);
           });
         });
       };
     }
   }
 
-  // ---- DraftKings odds scraping (betslip only) ----
+  // ---- DraftKings odds + line scraping (betslip only) ----
   function scrapeOdds() {
     // Target the odds display inside the betslip only
     // Structure: [data-testid="betslip-odds-standard"] > span.sportsbook-odds
@@ -303,6 +327,24 @@
     }
 
     return null;
+  }
+
+  // Scrape Over/Under line from DK betslip.
+  // DK shows the line in: <span data-testid="betslip-points-display">&nbsp;131.5</span>
+  // Direction (Over/Under) is in the outcome label text above it.
+  function scrapeLineInfo() {
+    const pointsEl = document.querySelector('[data-testid="betslip-points-display"]');
+    if (!pointsEl) return null;
+    const lineVal = parseFloat(pointsEl.textContent.replace(/\s/g, ""));
+    if (isNaN(lineVal)) return null;
+
+    // Find direction from the outcome name — look for "Over" or "Under" in betslip text
+    const betslip = document.querySelector(".dk-betslip-shell__container") || document.body;
+    const allText = betslip.textContent || "";
+    const dirMatch = allText.match(/\b(Over|Under)\b/i);
+    const direction = dirMatch ? dirMatch[1].charAt(0).toUpperCase() + dirMatch[1].slice(1).toLowerCase() : null;
+
+    return { direction, line: lineVal };
   }
 
   let lastFilledAmount = null;
@@ -386,17 +428,23 @@
 
   let lastOdds = null;
   let lastPollOdds = null;
+  let lastLineInfo = null;
 
   function poll() {
     const odds = scrapeOdds();
+    const lineInfo = scrapeLineInfo();
+    const lineKey = lineInfo ? `${lineInfo.direction}${lineInfo.line}` : null;
+    const lastLineKey = lastLineInfo ? `${lastLineInfo.direction}${lastLineInfo.line}` : null;
+
     if (odds !== lastPollOdds) {
       lastPollOdds = odds;
       lastFilledAmount = null;
     }
-    if (odds !== lastOdds) {
+    if (odds !== lastOdds || lineKey !== lastLineKey) {
       lastOdds = odds;
+      lastLineInfo = lineInfo;
       if (dkBetPhase === "waiting") dkBetPhase = "idle";
-      chrome.runtime.sendMessage({ type: "ODDS_UPDATE", source: "draftkings", odds });
+      chrome.runtime.sendMessage({ type: "ODDS_UPDATE", source: "draftkings", odds, lineInfo });
     }
   }
 
@@ -405,7 +453,7 @@
     if (msg.type === "ODDS_DATA") {
       const opp = pickOpponent(msg);
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
-        renderBanner(msg.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
+        renderBanner(msg.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel", msg.dkLine || null, opp ? opp.lineInfo : null);
       });
 
       // Post-fire adjustment: if opponent odds changed after we locked in our DK bet,
@@ -472,7 +520,7 @@
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
           const opp = pickOpponent(data);
-          if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
+          if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel", data.dkLine || null, opp ? opp.lineInfo : null);
         });
       });
     }
@@ -482,7 +530,7 @@
   chrome.storage.local.get("arbStake", ({ arbStake }) => {
     chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
       const opp = pickOpponent(data);
-      renderBanner(data ? data.draftkings : null, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
+      renderBanner(data ? data.draftkings : null, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel", data ? data.dkLine || null : null, opp ? opp.lineInfo : null);
     });
   });
 

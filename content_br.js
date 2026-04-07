@@ -87,15 +87,31 @@
       }
       .arb-bet-cancel-btn:hover { background: #ff5252; color: #000; }
       @keyframes arb-pulse { from { opacity: 1; } to { opacity: 0.4; } }
+      .arb-middle-warning {
+        width: 100%; background: #ff6f00; color: #000; font-weight: 800;
+        font-size: 12px; text-align: center; padding: 4px 16px; letter-spacing: 0.5px;
+      }
     `;
     document.head.appendChild(style);
+  }
+
+  function detectMiddle(dkLine, brLine) {
+    if (!dkLine || !brLine) return null;
+    if (!dkLine.direction || !brLine.direction) return null;
+    if (dkLine.direction === brLine.direction) return null;
+    const overLine  = dkLine.direction === "Over"  ? dkLine.line  : brLine.line;
+    const underLine = dkLine.direction === "Under" ? dkLine.line  : brLine.line;
+    if (overLine < underLine) {
+      return `MIDDLE RISK: Over ${overLine} / Under ${underLine} — score ${overLine}–${underLine - 0.5} wins both bets`;
+    }
+    return null;
   }
 
   let lastFilledAmount = null;
   let brBetPhase = "idle"; // "idle" | "waiting"
   let lockedBet = null;
 
-  function renderBanner(dkOdds, brOdds, stake) {
+  function renderBanner(dkOdds, brOdds, stake, dkLine, brLine) {
     injectStyles();
     let banner = document.getElementById("arb-banner");
     if (!banner) {
@@ -106,6 +122,8 @@
     }
 
     const s = parseFloat(stake) || 100;
+    const middleWarning = detectMiddle(dkLine, brLine);
+    const middleHTML = middleWarning ? `<div class="arb-middle-warning">⚠ ${middleWarning}</div>` : "";
 
     if (!dkOdds || !brOdds) {
       banner.className = "";
@@ -127,7 +145,7 @@
 
     if (!result) {
       banner.className = "no-arb";
-      banner.innerHTML = `<div id="arb-banner-inner">
+      banner.innerHTML = `${middleHTML}<div id="arb-banner-inner">
         <span class="arb-logo">ARB CALC</span>
         <div class="arb-odds-group">
           <div class="arb-site arb-site-dk">
@@ -157,7 +175,7 @@
       }
 
       banner.className = "";
-      banner.innerHTML = `<div id="arb-banner-inner">
+      banner.innerHTML = `${middleHTML}<div id="arb-banner-inner">
         <span class="arb-logo">ARB ✓</span>
         <div class="arb-odds-group">
           <div class="arb-site arb-site-dk">
@@ -212,7 +230,7 @@
         const newStake = parseFloat(input.value) || 100;
         chrome.storage.local.set({ arbStake: newStake });
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-          if (data) renderBanner(data.draftkings, data.betrivers, newStake);
+          if (data) renderBanner(data.draftkings, data.betrivers, newStake, data.dkLine || null, data.brLine || null);
         });
       });
     }
@@ -224,7 +242,7 @@
         chrome.runtime.sendMessage({ type: "BET_INTENT", source: "betrivers" }, () => void chrome.runtime.lastError);
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-            if (data) renderBanner(data.draftkings, data.betrivers, arbStake || 100);
+            if (data) renderBanner(data.draftkings, data.betrivers, arbStake || 100, data.dkLine || null, data.brLine || null);
           });
         });
       };
@@ -237,15 +255,14 @@
         chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "betrivers" }, () => void chrome.runtime.lastError);
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-            if (data) renderBanner(data.draftkings, data.betrivers, arbStake || 100);
+            if (data) renderBanner(data.draftkings, data.betrivers, arbStake || 100, data.dkLine || null, data.brLine || null);
           });
         });
       };
     }
   }
 
-  // ---- BetRivers odds scraping ----
-  // Selector: span.mod-KambiBC-betslip-outcome__odds inside the betslip
+  // ---- BetRivers odds + line scraping ----
   function scrapeOdds() {
     const betslip = document.querySelector(".mod-KambiBC-betslip-container") ||
                     document.querySelector("[class*='betslip']");
@@ -262,6 +279,24 @@
     for (const el of els) {
       const t = el.textContent.trim().replace("−", "-").replace("–", "-");
       if (/^[+-]?\d+$/.test(t)) return t;
+    }
+    return null;
+  }
+
+  // Scrape Over/Under line from BetRivers betslip.
+  // Selector: span.mod-KambiBC-betslip-outcome__outcome-label
+  // Text examples: "Over 131.5", "Under 48.5"
+  function scrapeLineInfo() {
+    const els = document.querySelectorAll(".mod-KambiBC-betslip-outcome__outcome-label");
+    for (const el of els) {
+      const t = el.textContent.trim();
+      const match = t.match(/^(Over|Under)\s+([\d.]+)$/i);
+      if (match) {
+        return {
+          direction: match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase(),
+          line: parseFloat(match[2])
+        };
+      }
     }
     return null;
   }
@@ -286,7 +321,24 @@
   }
 
   function clickBrButton() {
-    // BetRivers place bet button: button[aria-label="Place bet"]
+    // If BetRivers is showing an odds change approval, click that first then
+    // wait for it to resolve back to the normal "Place bet" button.
+    const approveBtn = document.querySelector('button[aria-label="Approve odds change"]');
+    if (approveBtn && !approveBtn.disabled) {
+      approveBtn.click();
+      // Poll until the approve button is gone and the place bet button appears
+      const started = Date.now();
+      const poll = setInterval(() => {
+        if (Date.now() - started > 4000) { clearInterval(poll); return; }
+        const stillApproving = document.querySelector('button[aria-label="Approve odds change"]');
+        if (stillApproving) return; // still waiting
+        clearInterval(poll);
+        const placeBtn = document.querySelector('button[aria-label="Place bet"]');
+        if (placeBtn && !placeBtn.disabled) placeBtn.click();
+      }, 100);
+      return;
+    }
+
     const btn = document.querySelector('button[aria-label="Place bet"]');
     if (!btn || btn.disabled) return;
     btn.click();
@@ -330,24 +382,30 @@
 
   let lastOdds = null;
   let lastPollOdds = null;
+  let lastLineInfo = null;
 
   function poll() {
     const odds = scrapeOdds();
+    const lineInfo = scrapeLineInfo();
+    const lineKey = lineInfo ? `${lineInfo.direction}${lineInfo.line}` : null;
+    const lastLineKey = lastLineInfo ? `${lastLineInfo.direction}${lastLineInfo.line}` : null;
+
     if (odds !== lastPollOdds) {
       lastPollOdds = odds;
       lastFilledAmount = null;
     }
-    if (odds !== lastOdds) {
+    if (odds !== lastOdds || lineKey !== lastLineKey) {
       lastOdds = odds;
+      lastLineInfo = lineInfo;
       if (brBetPhase === "waiting") brBetPhase = "idle";
-      chrome.runtime.sendMessage({ type: "ODDS_UPDATE", source: "betrivers", odds });
+      chrome.runtime.sendMessage({ type: "ODDS_UPDATE", source: "betrivers", odds, lineInfo });
     }
   }
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "ODDS_DATA") {
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
-        renderBanner(msg.draftkings, msg.betrivers, arbStake || 100);
+        renderBanner(msg.draftkings, msg.betrivers, arbStake || 100, msg.dkLine || null, msg.brLine || null);
       });
     }
 
@@ -379,7 +437,7 @@
       lockedBet = null;
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-          if (data) renderBanner(data.draftkings, data.betrivers, arbStake || 100);
+          if (data) renderBanner(data.draftkings, data.betrivers, arbStake || 100, data.dkLine || null, data.brLine || null);
         });
       });
     }
@@ -391,7 +449,9 @@
       renderBanner(
         data ? data.draftkings : null,
         data ? data.betrivers : null,
-        arbStake || 100
+        arbStake || 100,
+        data ? data.dkLine || null : null,
+        data ? data.brLine || null : null
       );
     });
   });

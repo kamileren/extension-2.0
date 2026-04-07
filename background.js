@@ -3,7 +3,11 @@ let oddsData = {
   draftkings: null,
   fanduel: null,
   fdMaxWager: null,
-  betrivers: null
+  betrivers: null,
+  // line info: { direction: "Over"|"Under", line: 131.5 } per site
+  dkLine: null,
+  fdLine: null,
+  brLine: null
 };
 
 let serverUrl = null;
@@ -28,7 +32,10 @@ function broadcast() {
           draftkings: oddsData.draftkings,
           fanduel: oddsData.fanduel,
           fdMaxWager: oddsData.fdMaxWager,
-          betrivers: oddsData.betrivers
+          betrivers: oddsData.betrivers,
+          dkLine: oddsData.dkLine,
+          fdLine: oddsData.fdLine,
+          brLine: oddsData.brLine
         }).catch(() => {});
       }
     });
@@ -146,6 +153,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           oddsData.fdMaxWager = null;
         }
       }
+      oddsData.fdLine = message.lineInfo || null;
+    } else if (message.source === "draftkings") {
+      oddsData.dkLine = message.lineInfo || null;
+    } else if (message.source === "betrivers") {
+      oddsData.brLine = message.lineInfo || null;
     }
     broadcast();
     pushToServer(message.source, message.odds, message.fdMaxWager ?? null);
