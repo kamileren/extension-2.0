@@ -7,7 +7,8 @@
   "host_permissions": [
     "https://*.draftkings.com/*",
     "https://*.fanduel.com/*",
-    "https://*.fanduel.ca/*"
+    "https://*.fanduel.ca/*",
+    "https://*.betrivers.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -21,6 +22,11 @@
     {
       "matches": ["https://*.fanduel.com/*", "https://*.fanduel.ca/*"],
       "js": ["content_fd.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.betrivers.com/*"],
+      "js": ["content_br.js"],
       "run_at": "document_idle"
     }
   ],

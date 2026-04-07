@@ -1,3 +1,282 @@
-timestamp,site,status,totalWagered,totalPotentialPayout,wager,odds,toWin,totalPayout,betId,selection
-2026-04-01T01:15:31.857Z,draftkings,placed,$47.00 CAD,$79.41 CAD,,,,,,
-2026-04-01T01:15:30.522Z,fanduel,placed,,,$29.00,+168,$48.72,$77.72,BET ID: O/1333990/0000151,"Brandon Williams, To Record 4+ Rebounds, , +168, Dallas Mavericks @ Milwaukee Bucks, 8:11pm ET"
+timestamp,site,status,wager,odds,toWin,totalPayout
+2026-04-01T01:15:31.857Z,draftkings,placed,47.00,-145,32.41,79.41
+2026-04-01T01:15:30.522Z,fanduel,placed,29.00,+168,48.72,77.72
+2026-04-01T01:32:02.260Z,fanduel,placed,81.00,+168,136.08,217.08,BET ID: O/1333990/0000152,"Under, Total Goals, , +168, Philadelphia Flyers @ Washington Capitals, 7:09pm ET"
+2026-04-01T01:32:11.795Z,draftkings,placed,118.00,-120,98.33,216.33,,
+2026-04-01T01:32:21.221Z,fanduel,placed,51.00,+320,142.80,193.80,BET ID: O/1333990/0000153,"Ottawa Senators +2.5, Alternate Puck Line, , +320, Ottawa Senators @ Florida Panthers, 7:08pm ET"
+2026-04-01T01:32:37.842Z,draftkings,placed,91.00,-215,42.32,133.32,,
+2026-04-01T01:39:48.276Z,fanduel,placed,38.00,+205,77.90,115.90,BET ID: O/1333990/0000154,"Under (8.5), Alternate Total Runs, , +205, Tampa Bay Rays @ Milwaukee Brewers, 7:41pm ET"
+2026-04-01T01:39:54.581Z,draftkings,placed,61.00,-153,39.86,100.86,,
+2026-04-01T01:40:55.657Z,draftkings,placed,48.00,-154,31.16,79.16,,
+2026-04-01T01:40:56.850Z,fanduel,placed,29.00,+168,48.72,77.72,BET ID: O/1333990/0000155,"Daniss Jenkins Under, Daniss Jenkins - Rebounds, , +168, Toronto Raptors @ Detroit Pistons, 8:13pm ET"
+2026-04-01T01:47:22.254Z,fanduel,placed,25.00,+140,35.00,60.00,BET ID: O/1333990/0000156,"Josh Hart Under, Josh Hart - Assists, , +140, New York Knicks @ Houston Rockets, 8:12pm ET"
+2026-04-01T01:47:25.588Z,draftkings,placed,33.00,-125,26.40,59.40,,
+2026-04-01T01:50:50.131Z,draftkings,placed,44.00,+135,59.40,103.40,,
+2026-04-01T01:50:49.862Z,fanduel,placed,55.00,-110,50.00,105.00,BET ID: O/1333990/0000157,"Tari Eason Under, Tari Eason - Points, , -110, New York Knicks @ Houston Rockets, 8:12pm ET"
+2026-04-01T01:52:04.166Z,draftkings,placed,53.00,-105,50.47,103.47,,
+2026-04-01T01:52:03.328Z,fanduel,placed,46.00,+128,58.88,104.88,BET ID: O/1333990/0000158,"Over 240.5, Alternate Total Points, , +128, Toronto Raptors @ Detroit Pistons, 8:13pm ET"
+2026-04-01T01:53:46.617Z,draftkings,placed,40.00,+155,62.00,102.00,,
+2026-04-01T01:53:46.174Z,fanduel,placed,59.00,-130,45.38,104.38,BET ID: O/1333990/0000159,"Over, Home Team Total Points, , -130, Dallas Mavericks @ Milwaukee Bucks, 8:11pm ET"
+2026-04-01T02:11:44.491Z,fanduel,placed,61.00,-140,43.57,104.57,BET ID: O/1333990/0000160,"Under, Home Team Total Points, , -140, Dallas Mavericks @ Milwaukee Bucks, 8:11pm ET"
+2026-04-01T02:11:49.237Z,draftkings,placed,38.00,+170,64.60,102.60,,
+2026-04-01T02:17:30.617Z,fanduel,placed,83.00,+134,111.22,194.22,BET ID: O/1333990/0000161,"Under 208.5, Alternate Total Points, , +134, New York Knicks @ Houston Rockets, 8:12pm ET"
+2026-04-01T02:17:33.639Z,draftkings,placed,107.00,-120,89.16,196.16,,
+2026-04-01T02:22:23.747Z,fanduel,placed,63.00,-102,61.76,124.76,BET ID: O/1333990/0000162,"Over, Away Team Total Points, , -102, New York Knicks @ Houston Rockets, 8:12pm ET"
+2026-04-01T02:22:28.544Z,draftkings,placed,37.00,+240,88.80,125.80,,
+2026-04-01T02:25:10.230Z,draftkings,placed,102.00,-340,30.00,132.00,,
+2026-04-01T02:25:09.342Z,fanduel,placed,20.00,+450,90.00,110.00,BET ID: O/1333990/0000163,"Under 237.5, Alternate Total Points, , +450, Toronto Raptors @ Detroit Pistons, 8:13pm ET"
+2026-04-01T02:28:22.691Z,draftkings,placed,102.00,+170,173.40,275.40,,
+2026-04-01T02:28:21.759Z,fanduel,placed,152.00,-122,124.59,276.59,BET ID: O/1333990/0000164,"Over, Total Points, , -122, Toronto Raptors @ Detroit Pistons, 8:13pm ET"
+2026-04-01T02:30:39.853Z,fanduel,placed,80.00,+140,112.00,192.00,BET ID: O/1333990/0000165,"Over, Total Runs, , +140, Boston Red Sox @ Houston Astros, 8:11pm ET"
+2026-04-01T02:30:45.800Z,draftkings,placed,107.00,-127,84.25,191.25,,
+2026-04-01T02:45:36.637Z,draftkings,placed,143.00,+125,178.75,321.75,,
+2026-04-01T02:45:35.868Z,fanduel,placed,156.00,+106,165.36,321.36,BET ID: O/1333990/0000166,"Under 231.5, Alternate Total Points, , +106, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T02:50:01.581Z,draftkings,placed,141.00,+115,162.15,303.15,,
+2026-04-01T02:55:07.772Z,fanduel,placed,100.00,-104,96.15,196.15,BET ID: O/1333990/0000167,"Dennis Schroder Under, Dennis Schroder - Points, , -104, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T02:55:11.404Z,draftkings,placed,85.00,+130,110.50,195.50,,
+2026-04-01T02:57:41.849Z,fanduel,placed,83.00,+148,122.84,205.84,BET ID: O/1333990/0000168,"Evan Mobley, To Score 15+ Points, , +148, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T02:57:46.520Z,draftkings,placed,116.00,-130,89.23,205.23,,
+2026-04-01T02:58:28.860Z,fanduel,placed,1.00,+148,1.48,2.48,BET ID: O/1333990/0000169,"Evan Mobley, To Score 15+ Points, , +148, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T02:58:36.783Z,draftkings,placed,2.00,-131,1.53,3.53,,
+2026-04-01T03:03:39.061Z,fanduel,placed,33.00,+102,33.66,66.66,BET ID: O/1333990/0000170,"Luka Doncic Under, Luka Doncic - Assists, , +102, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:03:48.112Z,draftkings,placed,31.00,+115,35.65,66.65,,
+2026-04-01T03:04:23.860Z,fanduel,placed,2.00,-106,1.89,3.89,BET ID: O/1333990/0000171,"Dennis Schroder Under, Dennis Schroder - Points, , -106, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:04:31.079Z,draftkings,placed,1.00,+135,1.35,2.35,,
+2026-04-01T03:04:44.719Z,draftkings,placed,91.00,+124,112.84,203.84,,
+2026-04-01T03:04:43.181Z,fanduel,placed,108.00,-112,96.43,204.43,BET ID: O/1333990/0000172,"Under, 1st Half Total Points, , -112, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:05:08.502Z,draftkings,placed,3.00,+120,3.60,6.60,,
+2026-04-01T03:05:06.988Z,fanduel,placed,4.00,-106,3.77,7.77,BET ID: O/1333990/0000173,"Dennis Schroder Under, Dennis Schroder - Points, , -106, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:06:54.007Z,draftkings,placed,45.00,+115,51.75,96.75,,
+2026-04-01T03:06:52.528Z,fanduel,placed,48.00,+102,48.96,96.96,BET ID: O/1333990/0000174,"Evan Mobley Under, Evan Mobley - Rebounds, , +102, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:08:05.130Z,fanduel,placed,105.00,+116,121.80,226.80,BET ID: O/1333990/0000175,"Deandre Ayton, To Score 10+ Points, , +116, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:08:08.639Z,draftkings,placed,117.00,-105,111.42,228.42,,
+2026-04-01T03:10:36.947Z,draftkings,placed,45.00,+105,47.25,92.25,,
+2026-04-01T03:10:35.259Z,fanduel,placed,42.00,+118,49.56,91.56,BET ID: O/1333990/0000176,"Jaxson Hayes Over, Jaxson Hayes - Rebounds, , +118, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:10:55.584Z,fanduel,placed,68.00,-136,50.00,118.00,BET ID: O/1333990/0000177,"Deandre Ayton Under, Deandre Ayton - Rebounds, , -136, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:11:00.463Z,draftkings,placed,46.00,+155,71.30,117.30,,
+2026-04-01T03:13:59.110Z,fanduel,placed,70.00,+174,121.80,191.80,BET ID: O/1333990/0000178,"Dennis Schroder, 2+ Made Threes, , +174, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:14:03.013Z,draftkings,placed,118.00,-154,76.62,194.62,,
+2026-04-01T03:14:42.651Z,fanduel,placed,97.00,+128,124.16,221.16,BET ID: O/1333990/0000179,"Donovan Mitchell, To Score 20+ Points, , +128, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:14:49.724Z,draftkings,placed,114.00,-105,108.57,222.57,,
+2026-04-01T03:22:39.084Z,fanduel,placed,22.00,+220,48.40,70.40,BET ID: O/1333990/0000180,"Toumani Camara, To Record 6+ Rebounds, , +220, Portland Trail Blazers @ Los Angeles Clippers, 11:13pm ET"
+2026-04-01T03:22:43.566Z,draftkings,placed,42.00,-140,30.00,72.00,,
+2026-04-01T03:25:33.929Z,draftkings,placed,181.00,+154,278.74,459.74,,
+2026-04-01T03:26:18.703Z,fanduel,placed,53.00,-106,50.00,103.00,BET ID: O/1333990/0000181,"Toumani Camara Over, Toumani Camara - Rebounds, , -106, Portland Trail Blazers @ Los Angeles Clippers, 11:13pm ET"
+2026-04-01T03:26:23.418Z,draftkings,placed,46.00,+120,55.20,101.20,,
+2026-04-01T03:26:58.448Z,draftkings,placed,46.00,+120,55.20,101.20,,
+2026-04-01T03:26:58.919Z,fanduel,placed,97.00,+128,124.16,221.16,BET ID: O/1333990/0000182,"Austin Reaves, To Score 20+ Points, , +128, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:27:01.865Z,draftkings,placed,116.00,-110,105.45,221.45,,
+2026-04-01T03:27:59.391Z,fanduel,placed,57.00,-114,50.00,107.00,BET ID: O/1333990/0000183,"Donovan Clingan Under, Donovan Clingan - Rebounds, , -114, Portland Trail Blazers @ Los Angeles Clippers, 11:13pm ET"
+2026-04-01T03:28:07.236Z,draftkings,placed,46.00,+130,59.80,105.80,,
+2026-04-01T03:29:07.031Z,fanduel,placed,33.00,+106,34.98,67.98,BET ID: O/1333990/0000184,"Dennis Schroder Over, Dennis Schroder - Assists, , +106, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:29:15.029Z,draftkings,placed,31.00,+114,35.34,66.34,,
+2026-04-01T03:30:17.558Z,fanduel,placed,29.00,+172,49.88,78.88,BET ID: O/1333990/0000185,"Austin Reaves Over, Austin Reaves - Made Threes, , +172, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:30:28.236Z,draftkings,placed,47.00,-154,30.51,77.51,,
+2026-04-01T03:31:32.708Z,draftkings,placed,194.00,+110,213.40,407.40,,
+2026-04-01T03:33:01.985Z,fanduel,placed,50.00,+100,50.00,100.00,BET ID: O/1333990/0000186,"Jarrett Allen Under, Jarrett Allen - Rebounds, , +100, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:33:03.676Z,draftkings,placed,44.00,+125,55.00,99.00,,
+2026-04-01T03:33:56.764Z,draftkings,placed,19.00,-110,17.27,36.27,,
+2026-04-01T03:44:59.570Z,fanduel,placed,143.00,-115,124.35,267.35,BET ID: O/1333990/0000187,"Jrue Holiday, 5+ Made Threes, , -115, Portland Trail Blazers @ Los Angeles Clippers, 11:13pm ET"
+2026-04-01T03:45:03.363Z,draftkings,placed,114.00,+135,153.90,267.90,,
+2026-04-01T03:56:47.502Z,fanduel,placed,28.00,+174,48.72,76.72,BET ID: O/1333990/0000188,"Jake Laravia, To Record 6+ Rebounds, , +174, Cleveland Cavaliers @ Los Angeles Lakers, 10:41pm ET"
+2026-04-01T03:56:52.132Z,draftkings,placed,47.00,-154,30.51,77.51,,
+2026-04-01T03:57:05.847Z,draftkings,placed,47.00,-154,30.51,77.51,,
+2026-04-01T03:57:08.820Z,fanduel,placed,51.00,-106,48.11,99.11,BET ID: O/1333990/0000189,"Bennedict Mathurin Over, Bennedict Mathurin - Made Threes, , -106, Portland Trail Blazers @ Los Angeles Clippers, 11:13pm ET"
+2026-04-01T03:57:18.647Z,draftkings,placed,47.00,+110,51.70,98.70,,
+2026-04-01T03:59:58.349Z,draftkings,placed,45.00,-130,34.61,79.61,,
+2026-04-01T03:59:59.758Z,fanduel,placed,30.00,+164,49.20,79.20,BET ID: O/1333990/0000191,"Bennedict Mathurin, To Record 4+ Rebounds, , +164, Portland Trail Blazers @ Los Angeles Clippers, 11:13pm ET"
+2026-04-01T04:01:07.256Z,fanduel,placed,66.00,-142,46.48,112.48,BET ID: O/1333990/0000192,"Over, 1st Half Away Team Total, , -142, Portland Trail Blazers @ Los Angeles Clippers, Mar 31, 11:13pm ET"
+2026-04-01T04:01:09.089Z,draftkings,placed,33.00,+245,80.85,113.85,,
+2026-04-01T04:03:27.401Z,fanduel,placed,59.00,-114,51.75,110.75,BET ID: O/1333990/0000193,"Over, 1st Half Total Points, , -114, Portland Trail Blazers @ Los Angeles Clippers, Mar 31, 11:13pm ET"
+2026-04-01T04:03:32.396Z,draftkings,placed,40.00,+175,70.00,110.00,,
+2026-04-01T04:03:58.287Z,draftkings,placed,42.00,+165,69.30,111.30,,
+2026-04-01T04:03:59.503Z,fanduel,placed,57.00,-120,47.50,104.50,BET ID: O/1333990/0000194,"Over, 1st Half Total Points, , -120, Portland Trail Blazers @ Los Angeles Clippers, Mar 31, 11:13pm ET"
+2026-04-01T04:17:19.250Z,fanduel,placed,50.00,+102,51.00,101.00,BET ID: O/1333990/0000195,"Keon Ellis Over, Keon Ellis - Points, , +102, Cleveland Cavaliers @ Los Angeles Lakers, Mar 31, 10:41pm ET"
+2026-04-01T04:17:21.464Z,draftkings,placed,49.00,+110,53.90,102.90,,
+2026-04-01T04:18:13.889Z,fanduel,placed,48.00,+102,48.96,96.96,BET ID: O/1333990/0000196,"Keon Ellis Over, Keon Ellis - Points, , +102, Cleveland Cavaliers @ Los Angeles Lakers, Mar 31, 10:41pm ET"
+2026-04-01T04:21:35.706Z,draftkings,placed,65.00,+210,136.50,201.50,,
+2026-04-01T04:21:36.957Z,fanduel,placed,96.00,-192,50.00,146.00,BET ID: O/1333990/0000197,"Luka Doncic Under, Luka Doncic - Made Threes, , -192, Cleveland Cavaliers @ Los Angeles Lakers, Mar 31, 10:41pm ET"
+2026-04-01T04:28:05.131Z,draftkings,placed,89.00,+125,111.25,200.25,,
+2026-04-02T01:21:26.081Z,fanduel,placed,56.00,-112,50.00,106.00
+2026-04-02T01:21:27.099Z,draftkings,placed,48.00,+120,57.60,105.60
+2026-04-02T01:22:36.720Z,fanduel,placed,106.00,-108,98.15,204.15
+2026-04-02T01:22:42.262Z,draftkings,placed,93.00,+120,111.60,204.60
+2026-04-02T01:24:23.114Z,draftkings,placed,47.00,-125,37.60,84.60
+2026-04-02T01:24:22.681Z,fanduel,placed,34.00,+146,49.64,83.64
+2026-04-02T01:24:52.143Z,draftkings,placed,45.00,+155,69.75,114.75
+2026-04-02T01:24:57.060Z,fanduel,placed,53.00,-106,50.00,103.00
+2026-04-02T01:27:16.337Z,draftkings,placed,43.00,+200,86.00,129.00
+2026-04-02T01:27:15.996Z,fanduel,placed,51.00,-114,44.74,95.74
+2026-04-02T01:27:29.599Z,draftkings,placed,43.00,+135,58.05,101.05
+2026-04-02T01:29:04.802Z,fanduel,placed,40.00,+124,49.60,89.60
+2026-04-02T01:29:08.884Z,draftkings,placed,49.00,-120,40.83,89.83
+2026-04-02T01:29:22.577Z,draftkings,placed,86.00,+140,120.40,206.40
+2026-04-02T01:29:23.681Z,fanduel,placed,113.00,-118,95.76,208.76
+2026-04-02T01:29:45.383Z,fanduel,placed,41.00,+290,118.90,159.90
+2026-04-02T01:29:48.043Z,draftkings,placed,102.00,-160,63.75,165.75
+2026-04-02T01:30:25.475Z,draftkings,placed,40.00,+195,78.00,118.00
+2026-04-02T01:30:25.405Z,fanduel,placed,48.00,-125,38.40,86.40
+2026-04-02T01:32:02.121Z,fanduel,placed,109.00,-110,99.09,208.09
+2026-04-02T01:32:02.981Z,draftkings,placed,90.00,+130,117.00,207.00
+2026-04-02T01:33:26.565Z,fanduel,placed,106.00,-114,92.98,198.98
+2026-04-02T01:33:30.896Z,draftkings,placed,80.00,-110,72.72,152.72
+2026-04-02T01:35:40.040Z,draftkings,placed,80.00,-110,72.72,152.72
+2026-04-02T01:35:43.762Z,fanduel,placed,91.00,-122,74.59,165.59
+2026-04-02T01:35:46.780Z,draftkings,placed,68.00,+170,115.60,183.60
+2026-04-02T01:37:09.361Z,fanduel,placed,51.00,-148,34.46,85.46
+2026-04-02T01:37:13.232Z,draftkings,placed,34.00,+160,54.40,88.40
+2026-04-02T01:37:31.875Z,fanduel,placed,40.00,+124,49.60,89.60
+2026-04-02T01:37:32.856Z,draftkings,placed,42.00,+110,46.20,88.20
+2026-04-02T01:38:12.163Z,fanduel,placed,20.00,+172,34.40,54.40
+2026-04-02T01:38:14.763Z,draftkings,placed,31.00,-125,24.80,55.80
+2026-04-02T01:38:38.411Z,draftkings,placed,112.00,-110,101.81,213.81
+2026-04-02T01:39:47.478Z,fanduel,placed,27.00,+126,34.02,61.02
+2026-04-02T01:39:49.716Z,draftkings,placed,13.00,+360,46.80,59.80
+2026-04-02T01:40:59.417Z,fanduel,placed,31.00,+110,34.10,65.10
+2026-04-02T01:41:03.226Z,draftkings,placed,30.00,+120,36.00,66.00
+2026-04-02T01:42:38.519Z,fanduel,placed,46.00,+108,49.68,95.68
+2026-04-02T01:42:45.553Z,draftkings,placed,43.00,+120,51.60,94.60
+2026-04-02T01:43:42.205Z,draftkings,placed,88.00,+140,123.20,211.20
+2026-04-02T01:43:43.613Z,fanduel,placed,111.00,-110,100.91,211.91
+2026-04-02T01:44:07.592Z,fanduel,placed,84.00,-168,50.00,134.00
+2026-04-02T01:44:11.646Z,draftkings,placed,44.00,+200,88.00,132.00
+2026-04-02T01:44:35.758Z,draftkings,placed,22.00,-135,16.29,38.29
+2026-04-02T01:45:58.181Z,fanduel,placed,16.00,+154,24.64,40.64
+2026-04-02T01:46:07.410Z,draftkings,placed,20.00,+100,20.00,40.00
+2026-04-02T01:46:49.122Z,fanduel,placed,8.00,-108,7.41,15.41
+2026-04-02T01:46:50.173Z,draftkings,placed,5.00,+160,8.00,13.00
+2026-04-02T01:47:43.961Z,fanduel,placed,60.00,-120,50.00,110.00
+2026-04-02T01:47:44.879Z,draftkings,placed,41.00,+165,67.65,108.65
+2026-04-02T01:48:06.129Z,fanduel,placed,100.00,-110,90.91,190.91
+2026-04-02T01:48:08.446Z,draftkings,placed,90.00,+120,108.00,198.00
+2026-04-02T01:48:53.609Z,fanduel,placed,10.00,+230,23.00,33.00
+2026-04-02T01:48:56.367Z,draftkings,placed,22.00,-180,12.22,34.22
+2026-04-02T01:49:09.384Z,fanduel,placed,57.00,-114,50.00,107.00
+2026-04-02T01:49:13.724Z,draftkings,placed,46.00,+130,59.80,105.80
+2026-04-02T01:50:03.438Z,draftkings,placed,85.00,+140,119.00,204.00
+2026-04-02T01:50:04.307Z,fanduel,placed,104.00,-128,81.25,185.25
+2026-04-02T01:50:56.291Z,draftkings,placed,33.00,+120,39.60,72.60
+2026-04-02T01:50:56.483Z,fanduel,placed,37.00,-106,34.91,71.91
+2026-04-02T01:51:24.771Z,fanduel,placed,27.00,+120,32.40,59.40
+2026-04-02T01:51:25.816Z,draftkings,placed,27.00,+124,33.48,60.48
+2026-04-02T01:53:36.882Z,draftkings,placed,84.00,+140,117.60,201.60
+2026-04-02T01:53:36.946Z,fanduel,placed,102.00,-102,100.00,202.00
+2026-04-02T01:54:28.491Z,fanduel,placed,113.00,-130,86.92,199.92
+2026-04-02T01:54:29.712Z,draftkings,placed,83.00,+145,120.35,203.35
+2026-04-02T01:54:50.407Z,draftkings,placed,83.00,+135,112.05,195.05
+2026-04-02T01:54:50.092Z,fanduel,placed,98.00,+100,98.00,196.00
+2026-04-02T01:55:27.817Z,draftkings,placed,27.00,-105,25.71,52.71
+2026-04-02T01:55:28.271Z,fanduel,placed,19.00,-200,9.50,28.50
+2026-04-02T01:56:32.278Z,fanduel,placed,114.00,-122,93.44,207.44
+2026-04-02T01:56:39.195Z,draftkings,placed,73.00,+185,135.05,208.05
+2026-04-02T01:57:31.287Z,fanduel,placed,45.00,-122,36.89,81.89
+2026-04-02T02:01:48.038Z,fanduel,placed,99.00,-138,71.74,170.74
+2026-04-02T02:01:50.510Z,draftkings,placed,71.00,+145,102.95,173.95
+2026-04-02T02:02:10.455Z,fanduel,placed,43.00,+116,49.88,92.88
+2026-04-02T02:02:14.587Z,draftkings,placed,46.00,+100,46.00,92.00
+2026-04-02T02:02:29.993Z,fanduel,placed,76.00,-152,50.00,126.00
+2026-04-02T02:02:33.957Z,draftkings,placed,42.00,+195,81.90,123.90
+2026-04-02T02:02:52.351Z,fanduel,placed,13.00,-192,6.77,19.77
+2026-04-02T02:02:55.021Z,draftkings,placed,6.00,+210,12.60,18.60
+2026-04-02T02:04:36.625Z,fanduel,placed,74.00,-148,50.00,124.00
+2026-04-02T02:04:40.935Z,draftkings,placed,38.00,+225,85.50,123.50
+2026-04-02T02:05:16.658Z,fanduel,placed,37.00,+130,48.10,85.10
+2026-04-02T02:05:20.822Z,draftkings,placed,35.00,+145,50.75,85.75
+2026-04-02T02:06:33.276Z,fanduel,placed,59.00,-118,49.17,108.17
+2026-04-02T02:06:37.352Z,draftkings,placed,47.00,+130,61.10,108.10
+2026-04-02T02:08:14.131Z,fanduel,placed,36.00,+680,244.80,280.80
+2026-04-02T02:09:55.128Z,fanduel,placed,65.00,+114,74.10,139.10
+2026-04-02T02:09:55.964Z,draftkings,placed,65.00,+115,74.75,139.75
+2026-04-02T02:10:16.302Z,fanduel,placed,39.00,-140,27.86,66.86
+2026-04-02T02:10:18.772Z,draftkings,placed,22.00,+200,44.00,66.00
+2026-04-02T02:10:34.945Z,fanduel,placed,10.00,-132,7.58,17.58
+2026-04-02T02:10:35.806Z,draftkings,placed,7.00,+155,10.85,17.85
+2026-04-02T02:11:08.863Z,fanduel,placed,21.00,+174,36.54,57.54
+2026-04-02T02:11:11.382Z,draftkings,placed,32.00,-130,24.61,56.61
+2026-04-02T02:11:54.800Z,draftkings,placed,162.00,-400,40.50,202.50
+2026-04-02T02:11:54.723Z,fanduel,placed,33.00,+500,165.00,198.00
+2026-04-02T02:17:07.038Z,fanduel,placed,57.00,-114,50.00,107.00
+2026-04-02T02:17:09.956Z,draftkings,placed,45.00,+135,60.75,105.75
+2026-04-02T02:17:45.100Z,fanduel,placed,73.00,+102,74.46,147.46
+2026-04-02T02:17:48.960Z,draftkings,placed,69.00,+115,79.35,148.35
+2026-04-02T02:18:09.775Z,fanduel,placed,129.00,-172,75.00,204.00
+2026-04-02T02:18:14.197Z,draftkings,placed,51.00,+300,153.00,204.00
+2026-04-02T02:19:29.826Z,draftkings,placed,45.00,-130,34.61,79.61
+2026-04-02T02:19:32.048Z,fanduel,placed,28.00,+174,48.72,76.72
+2026-04-02T02:20:06.666Z,fanduel,placed,128.00,-128,100.00,228.00
+2026-04-02T02:20:09.197Z,draftkings,placed,87.00,+160,139.20,226.20
+2026-04-02T02:20:43.915Z,fanduel,placed,88.00,+106,93.28,181.28
+2026-04-02T02:20:47.881Z,draftkings,placed,50.00,+260,130.00,180.00
+2026-04-02T02:21:50.325Z,fanduel,placed,78.00,-128,60.94,138.94
+2026-04-02T02:21:53.547Z,draftkings,placed,59.00,+135,79.65,138.65
+2026-04-02T02:30:30.464Z,fanduel,placed,33.00,+100,33.00,66.00
+2026-04-02T02:30:39.349Z,draftkings,placed,31.00,+120,37.20,68.20
+2026-04-02T02:31:10.950Z,fanduel,placed,47.00,+106,49.82,96.82
+2026-04-02T02:31:15.060Z,draftkings,placed,41.00,+135,55.35,96.35
+2026-04-02T02:31:31.120Z,fanduel,placed,72.00,-144,50.00,122.00
+2026-04-02T02:31:32.017Z,draftkings,placed,35.00,+245,85.75,120.75
+2026-04-02T02:31:59.975Z,fanduel,placed,76.00,+146,110.96,186.96
+2026-04-02T02:32:02.242Z,draftkings,placed,105.00,-130,80.76,185.76
+2026-04-02T02:34:34.140Z,fanduel,placed,128.00,-130,96.97,224.97
+2026-04-02T02:34:36.778Z,draftkings,placed,92.00,+145,133.40,225.40
+2026-04-02T02:35:34.153Z,fanduel,placed,100.00,+100,100.00,200.00
+2026-04-02T02:35:38.317Z,draftkings,placed,78.00,+155,120.90,198.90
+2026-04-02T02:35:53.223Z,fanduel,placed,50.00,+100,50.00,100.00
+2026-04-02T02:35:57.177Z,draftkings,placed,42.00,+135,56.70,98.70
+2026-04-02T02:37:45.975Z,fanduel,placed,55.00,-110,50.00,105.00
+2026-04-02T02:37:51.840Z,draftkings,placed,45.00,+130,58.50,103.50
+2026-04-02T02:38:29.726Z,fanduel,placed,79.00,-160,49.38,128.38
+2026-04-02T02:38:36.312Z,draftkings,placed,25.00,+400,100.00,125.00
+2026-04-02T02:39:10.373Z,fanduel,placed,38.00,+130,49.40,87.40
+2026-04-02T02:39:17.243Z,draftkings,placed,47.00,-115,40.86,87.86
+2026-04-02T02:39:33.470Z,fanduel,placed,42.00,+118,49.56,91.56
+2026-04-02T02:39:46.538Z,draftkings,placed,47.00,-105,44.76,91.76
+2026-04-02T02:41:45.322Z,fanduel,placed,27.00,+124,33.48,60.48
+2026-04-02T02:41:55.589Z,draftkings,placed,29.00,+110,31.90,60.90
+2026-04-02T02:42:45.550Z,fanduel,placed,39.00,-114,34.21,73.21
+2026-04-02T02:42:49.622Z,draftkings,placed,31.00,+140,43.40,74.40
+2026-04-02T02:43:11.747Z,fanduel,placed,59.00,-120,49.17,108.17
+2026-04-02T02:43:12.847Z,draftkings,placed,41.00,+160,65.60,106.60
+2026-04-02T02:44:00.120Z,draftkings,placed,171.00,-320,53.43,224.43
+2026-04-02T02:44:03.031Z,fanduel,placed,52.00,+285,148.20,200.20
+2026-04-02T02:50:11.909Z,fanduel,placed,125.00,-130,96.15,221.15
+2026-04-02T02:50:14.855Z,draftkings,placed,76.00,+195,148.20,224.20
+2026-04-02T02:50:34.969Z,fanduel,placed,108.00,-108,100.00,208.00
+2026-04-02T02:50:38.998Z,draftkings,placed,78.00,+165,128.70,206.70
+2026-04-02T02:50:58.459Z,draftkings,placed,42.00,+310,130.20,172.20
+2026-04-02T02:50:57.741Z,fanduel,placed,122.00,-245,49.80,171.80
+2026-04-02T02:59:47.547Z,fanduel,placed,18.00,+134,24.12,42.12
+2026-04-02T02:59:49.903Z,draftkings,placed,22.00,-110,20.00,42.00
+2026-04-02T03:00:29.029Z,fanduel,placed,147.00,-118,124.58,271.58
+2026-04-02T03:00:30.165Z,draftkings,placed,99.00,+175,173.25,272.25
+2026-04-02T03:01:04.045Z,fanduel,placed,28.00,+124,34.72,62.72
+2026-04-02T03:01:17.301Z,draftkings,placed,33.00,-110,30.00,63.00
+2026-04-02T03:05:34.652Z,draftkings,placed,89.00,-245,36.32,125.32
+2026-04-02T03:05:34.793Z,fanduel,placed,32.00,+290,92.80,124.80
+2026-04-02T03:05:54.073Z,draftkings,placed,42.00,+120,50.40,92.40
+2026-04-02T03:05:53.783Z,fanduel,placed,43.00,+116,49.88,92.88
+2026-04-02T03:09:20.310Z,draftkings,placed,71.00,+210,149.10,220.10
+2026-04-02T03:37:17.708Z,draftkings,placed,120.00,-130,92.30,212.30
+2026-04-02T03:37:18.232Z,fanduel,placed,88.00,+142,124.96,212.96
+2026-04-02T03:37:59.673Z,fanduel,placed,78.00,+116,99.84,177.84
+2026-04-02T03:38:04.095Z,draftkings,placed,74.00,+140,103.60,177.60
+2026-04-02T03:39:16.494Z,fanduel,placed,94.00,+106,99.64,193.64
+2026-04-02T03:39:20.767Z,draftkings,placed,97.00,+100,97.00,194.00
+2026-04-02T03:41:32.864Z,fanduel,placed,37.00,-108,34.26,71.26
+2026-04-02T03:41:46.145Z,draftkings,placed,33.00,+120,39.60,72.60
+2026-04-02T03:43:42.227Z,draftkings,placed,26.00,+110,28.60,54.60
+2026-04-02T03:43:41.164Z,fanduel,placed,20.00,+172,34.40,54.40
+2026-04-02T03:45:18.071Z,draftkings,placed,26.00,+110,28.60,54.60
+2026-04-02T03:45:20.488Z,fanduel,placed,11.00,+225,24.75,35.75
+2026-04-02T03:45:24.581Z,draftkings,placed,23.00,-188,12.23,35.23
+2026-04-02T03:45:34.900Z,draftkings,placed,26.00,+110,28.60,54.60
+2026-04-02T03:45:37.134Z,fanduel,placed,100.00,+116,116.00,216.00
+2026-04-02T03:45:41.554Z,draftkings,placed,112.00,+100,112.00,224.00
+2026-04-02T03:48:46.529Z,fanduel,placed,55.00,-110,50.00,105.00
+2026-04-02T03:48:49.811Z,draftkings,placed,42.00,+145,60.90,102.90
+2026-04-02T03:49:30.945Z,draftkings,placed,190.00,-170,111.76,301.76
+2026-04-02T03:49:31.878Z,fanduel,placed,109.00,+142,154.78,263.78
+2026-04-02T03:57:11.910Z,fanduel,placed,22.00,+158,34.76,56.76
+2026-04-02T03:57:22.055Z,draftkings,placed,33.00,-140,23.57,56.57
+2026-04-02T04:00:23.033Z,fanduel,placed,98.00,+100,98.00,196.00
+2026-04-02T04:00:26.092Z,draftkings,placed,96.00,+105,100.80,196.80

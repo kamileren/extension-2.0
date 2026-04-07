@@ -2,7 +2,8 @@
 let oddsData = {
   draftkings: null,
   fanduel: null,
-  fdMaxWager: null
+  fdMaxWager: null,
+  betrivers: null
 };
 
 let serverUrl = null;
@@ -20,13 +21,14 @@ function broadcast() {
     tabs.forEach((tab) => {
       if (
         tab.url &&
-        (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca"))
+        (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca") || tab.url.includes("betrivers.com"))
       ) {
         chrome.tabs.sendMessage(tab.id, {
           type: "ODDS_DATA",
           draftkings: oddsData.draftkings,
           fanduel: oddsData.fanduel,
-          fdMaxWager: oddsData.fdMaxWager
+          fdMaxWager: oddsData.fdMaxWager,
+          betrivers: oddsData.betrivers
         }).catch(() => {});
       }
     });
@@ -94,13 +96,13 @@ function connectWebSocket(url) {
       if (changed) broadcast();
     }
 
-    // Forward bet coordination messages to all DK/FD tabs instantly
+    // Forward bet coordination messages to all DK/FD/BR tabs instantly
     if (msg.type === "BET_FIRE" || msg.type === "BET_CANCEL" || msg.type === "BET_WAITING" || msg.type === "BET_FD_ACTUAL") {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (
             tab.url &&
-            (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca"))
+            (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca") || tab.url.includes("betrivers.com"))
           ) {
             chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
           }

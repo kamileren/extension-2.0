@@ -10,7 +10,7 @@ const os = require("os");
 const { WebSocketServer } = require("ws");
 
 const CSV_PATH = path.join(__dirname, "bets.csv");
-const CSV_HEADERS = ["timestamp", "site", "status", "wager", "odds", "toWin", "totalPayout", "betId", "selection"];
+const CSV_HEADERS = ["timestamp", "site", "status", "wager", "odds", "toWin", "totalPayout"];
 
 function escapeCsv(v) {
   if (v == null) return "";
@@ -48,7 +48,7 @@ function normalizeBetRow(row) {
     betId = null;
     selection = null;
   } else {
-    // fanduel
+    // fanduel / betrivers
     wager = parseMoney(row.wager);
     toWin = parseMoney(row.toWin);
     totalPayout = parseMoney(row.totalPayout);
@@ -101,6 +101,7 @@ let state = {
   draftkings: null,
   fanduel: null,
   fdMaxWager: null,
+  betrivers: null,
   updatedAt: null
 };
 
@@ -177,8 +178,16 @@ function americanToDecimal(american) {
   return 100 / Math.abs(n) + 1;
 }
 
-function serverArbValid() {
+function serverArbValid(intents) {
+  const sides = intents ? [...intents] : ["draftkings", "fanduel"];
+  const hasBr = sides.includes("betrivers");
+  const hasFd = sides.includes("fanduel");
   const dkDec = americanToDecimal(state.draftkings);
+  if (hasBr) {
+    const brDec = americanToDecimal(state.betrivers);
+    if (!dkDec || !brDec) return false;
+    return (1 / dkDec) + (1 / brDec) < 1;
+  }
   const fdDec = americanToDecimal(state.fanduel);
   if (!dkDec || !fdDec) return false;
   return (1 / dkDec) + (1 / fdDec) < 1;
@@ -200,6 +209,8 @@ function applyOddsUpdate(source, odds, fdMaxWager) {
     state.fanduel = odds ?? null;
     if (fdMaxWager != null) state.fdMaxWager = fdMaxWager;
     if (fdMaxWager === null) state.fdMaxWager = null;
+  } else if (source === "betrivers") {
+    state.betrivers = odds ?? null;
   }
   state.updatedAt = Date.now();
 }
@@ -340,7 +351,9 @@ wss.on("connection", (ws, req) => {
 
       if (betState.intents.size === 1) {
         betState.phase = "waiting";
-        const waitingOn = msg.source === "draftkings" ? "fanduel" : "draftkings";
+        const waitingOn = msg.source === "draftkings"
+          ? (betState.intents.has("betrivers") ? "betrivers" : "fanduel")
+          : "draftkings";
         wsBroadcast({ type: "BET_WAITING", waiting_on: waitingOn });
         betState.timeoutHandle = setTimeout(() => {
           pushLog("warn", "BET handshake timed out — resetting");
@@ -351,7 +364,7 @@ wss.on("connection", (ws, req) => {
       } else if (betState.intents.size === 2) {
         clearTimeout(betState.timeoutHandle);
         betState.timeoutHandle = null;
-        if (!serverArbValid()) {
+        if (!serverArbValid(betState.intents)) {
           pushLog("warn", "BET_INTENT: arb no longer valid — cancelling");
           wsBroadcast({ type: "BET_CANCEL", reason: "no_arb" });
           resetBetState();
@@ -483,6 +496,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
       <span class="odds-value fd" id="fd-val"><span style="font-size:12px;color:#333;font-style:italic">waiting...</span></span>
     </div>
     <div class="odds-row">
+      <span class="odds-label">BetRivers</span>
+      <span class="odds-value" id="br-val" style="color:#00b4d8"><span style="font-size:12px;color:#333;font-style:italic">waiting...</span></span>
+    </div>
+    <div class="odds-row">
       <span class="odds-label">FD Max Wager</span>
       <span class="odds-value" id="max-val" style="font-size:14px"><span style="font-size:12px;color:#333;font-style:italic">—</span></span>
     </div>
@@ -523,8 +540,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
     const fd = document.getElementById("fd-val");
     const mx = document.getElementById("max-val");
     const up = document.getElementById("updated-val");
+    const br = document.getElementById("br-val");
     dk.innerHTML = state.draftkings ? state.draftkings : '<span style="font-size:12px;color:#333;font-style:italic">no odds</span>';
     fd.innerHTML = state.fanduel    ? state.fanduel    : '<span style="font-size:12px;color:#333;font-style:italic">no odds</span>';
+    if (br) br.innerHTML = state.betrivers ? state.betrivers : '<span style="font-size:12px;color:#333;font-style:italic">no odds</span>';
     mx.innerHTML = state.fdMaxWager != null ? '$' + Number(state.fdMaxWager).toFixed(2) : '<span style="font-size:12px;color:#333;font-style:italic">—</span>';
     up.innerHTML = state.updatedAt  ? fmt(state.updatedAt) : '<span style="font-style:italic">—</span>';
   }
