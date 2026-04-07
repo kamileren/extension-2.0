@@ -9,7 +9,14 @@
     if (n > 0) return n / 100 + 1;
     return 100 / Math.abs(n) + 1;
   }
-  // odds1 = DK, odds2 = FD. fdMax caps the FD side.
+  // Pick whichever opponent odds are available: BetRivers first, then FanDuel.
+  function pickOpponent(data) {
+    if (data && data.betrivers) return { odds: data.betrivers, site: "betrivers", fdMaxWager: null };
+    if (data && data.fanduel)   return { odds: data.fanduel,   site: "fanduel",   fdMaxWager: data.fdMaxWager };
+    return null;
+  }
+
+  // odds1 = DK, odds2 = opponent. fdMax caps the opponent side (FD only).
   function calcBets(dkOdds, fdOdds, totalStake, fdMax) {
     const dkDec = americanToDecimal(dkOdds);
     const fdDec = americanToDecimal(fdOdds);
@@ -67,6 +74,7 @@
       .arb-site-name { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
       .arb-site-dk .arb-site-name { color: #f9a825; }
       .arb-site-fd .arb-site-name { color: #4fc3f7; }
+      .arb-site-br .arb-site-name { color: #00b4d8; }
       .arb-odd { font-size: 20px; font-weight: 700; color: #fff; }
       .arb-bet { font-size: 11px; color: #00e676; font-weight: 600; }
       .arb-divider { color: #555; font-size: 20px; }
@@ -109,7 +117,7 @@
     `;
   }
 
-  function renderBanner(dkOdds, fdOdds, stake, fdMaxWager) {
+  function renderBanner(dkOdds, oppOdds, stake, fdMaxWager, oppSite) {
     injectStyles();
     let banner = document.getElementById("arb-banner");
     if (!banner) {
@@ -121,16 +129,19 @@
     }
 
     const s = parseFloat(stake) || 100;
-    const fdMax = fdMaxWager != null ? parseFloat(fdMaxWager) : null;
+    const fdMax = (oppSite === "fanduel" && fdMaxWager != null) ? parseFloat(fdMaxWager) : null;
+    const oppLabel = oppSite === "betrivers" ? "BetRivers" : "FanDuel";
+    const oppClass = oppSite === "betrivers" ? "arb-site-br" : "arb-site-fd";
+    const oppShort = oppSite === "betrivers" ? "BR" : "FD";
 
-    if (!dkOdds || !fdOdds) {
+    if (!dkOdds || !oppOdds) {
       banner.className = "";
       banner.innerHTML = `<div id="arb-banner-inner">
         <span class="arb-logo">ARB CALC</span>
         <span class="arb-status">
           ${dkOdds ? `DK: <b>${dkOdds}</b>` : "Waiting for <b>DraftKings</b> odds..."}
           &nbsp;|&nbsp;
-          ${fdOdds ? `FD: <b>${fdOdds}</b>` : "Waiting for <b>FanDuel</b> odds..."}
+          ${oppOdds ? `${oppShort}: <b>${oppOdds}</b>` : `Waiting for <b>${oppLabel}</b> odds...`}
         </span>
         ${stakeHTML(s)}
         <button class="arb-close-btn" id="arb-close">✕</button>
@@ -139,7 +150,7 @@
       return;
     }
 
-    const result = calcBets(dkOdds, fdOdds, s, fdMax);
+    const result = calcBets(dkOdds, oppOdds, s, fdMax);
 
     if (!result) {
       banner.className = "no-arb";
@@ -151,9 +162,9 @@
             <span class="arb-odd">${dkOdds}</span>
           </div>
           <span class="arb-divider">vs</span>
-          <div class="arb-site arb-site-fd">
-            <span class="arb-site-name">FanDuel</span>
-            <span class="arb-odd">${fdOdds}</span>
+          <div class="arb-site ${oppClass}">
+            <span class="arb-site-name">${oppLabel}</span>
+            <span class="arb-odd">${oppOdds}</span>
           </div>
         </div>
         <div class="arb-result">
@@ -169,7 +180,7 @@
         ? `<span class="arb-bet-capped">MAX $${result.betFd}</span>`
         : `<span class="arb-bet">Bet $${result.betFd}</span>`;
       const stakeNote = result.capped
-        ? `${result.profitMargin}% ROI · Total stake $${result.effectiveStake} (FD capped)`
+        ? `${result.profitMargin}% ROI · Total stake $${result.effectiveStake} (${oppShort} capped)`
         : `${result.profitMargin}% ROI on $${s}`;
 
       // Auto-fill the DK wager input (floored, no cents).
@@ -189,9 +200,9 @@
             <span class="arb-bet">Bet $${result.betDk}</span>
           </div>
           <span class="arb-divider">↔</span>
-          <div class="arb-site arb-site-fd">
-            <span class="arb-site-name">FanDuel</span>
-            <span class="arb-odd">${fdOdds}</span>
+          <div class="arb-site ${oppClass}">
+            <span class="arb-site-name">${oppLabel}</span>
+            <span class="arb-odd">${oppOdds}</span>
             ${capNote}
           </div>
         </div>
@@ -202,7 +213,7 @@
         </div>
         ${dkBetPhase === "idle"
           ? `<button class="arb-bet-btn" id="arb-place-bet">Place Bet</button>`
-          : `<span class="arb-bet-waiting">Waiting for FanDuel...</span>
+          : `<span class="arb-bet-waiting">Waiting for ${oppLabel}...</span>
              <button class="arb-bet-cancel-btn" id="arb-cancel-bet">Cancel</button>`
         }
         ${stakeHTML(s)}
@@ -234,7 +245,8 @@
         const newStake = parseFloat(input.value) || 100;
         chrome.storage.local.set({ arbStake: newStake });
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-          if (data) renderBanner(data.draftkings, data.fanduel, newStake, data.fdMaxWager);
+          const opp = pickOpponent(data);
+          if (data) renderBanner(data.draftkings, opp ? opp.odds : null, newStake, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
         });
       });
     }
@@ -246,7 +258,8 @@
         chrome.runtime.sendMessage({ type: "BET_INTENT", source: "draftkings" }, () => void chrome.runtime.lastError);
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+            const opp = pickOpponent(data);
+            if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
           });
         });
       };
@@ -259,7 +272,8 @@
         chrome.runtime.sendMessage({ type: "BET_CANCEL", source: "draftkings" }, () => void chrome.runtime.lastError);
         chrome.storage.local.get("arbStake", ({ arbStake }) => {
           chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-            if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+            const opp = pickOpponent(data);
+            if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
           });
         });
       };
@@ -389,23 +403,27 @@
   // Listen for odds data updates from background
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "ODDS_DATA") {
+      const opp = pickOpponent(msg);
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
-        renderBanner(msg.draftkings, msg.fanduel, arbStake || 100, msg.fdMaxWager);
+        renderBanner(msg.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
       });
 
-      // Post-fire adjustment: if FD odds changed after we locked in our DK bet,
+      // Post-fire adjustment: if opponent odds changed after we locked in our DK bet,
       // recalculate the DK wager so profit is still guaranteed and re-fill the input.
-      // Formula: betDk_new = (betFd_locked * fdDec_new) / dkDec_locked
-      if (lockedBet && msg.fanduel && msg.fanduel !== lockedBet.fdOdds) {
-        const dkDec = americanToDecimal(lockedBet.dkOdds);
-        const fdDecNew = americanToDecimal(msg.fanduel);
-        if (dkDec && fdDecNew) {
-          const newDkBet = (lockedBet.betFd * fdDecNew) / dkDec;
-          const newProfit = (lockedBet.betFd * fdDecNew) - (newDkBet + lockedBet.betFd);
-          if (newProfit > 0) {
-            lockedBet.fdOdds = msg.fanduel;
-            lockedBet.betDk = newDkBet;
-            setTimeout(() => fillDkInput(newDkBet), 120);
+      if (lockedBet) {
+        const opp = pickOpponent(msg);
+        const newOppOdds = opp ? opp.odds : null;
+        if (newOppOdds && newOppOdds !== lockedBet.fdOdds) {
+          const dkDec = americanToDecimal(lockedBet.dkOdds);
+          const oppDecNew = americanToDecimal(newOppOdds);
+          if (dkDec && oppDecNew) {
+            const newDkBet = (lockedBet.betFd * oppDecNew) / dkDec;
+            const newProfit = (lockedBet.betFd * oppDecNew) - (newDkBet + lockedBet.betFd);
+            if (newProfit > 0) {
+              lockedBet.fdOdds = newOppOdds;
+              lockedBet.betDk = newDkBet;
+              setTimeout(() => fillDkInput(newDkBet), 120);
+            }
           }
         }
       }
@@ -415,14 +433,16 @@
       dkBetPhase = "idle";
       // Snapshot odds + amounts before the betslip DOM disappears
       chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-        if (data && data.draftkings && data.fanduel) {
+        const opp = pickOpponent(data);
+        if (data && data.draftkings && opp) {
           chrome.storage.local.get("arbStake", ({ arbStake }) => {
             const stake = arbStake || 100;
-            const result = calcBets(data.draftkings, data.fanduel, stake, data.fdMaxWager);
+            const fdMax = opp.site === "fanduel" ? data.fdMaxWager : null;
+            const result = calcBets(data.draftkings, opp.odds, stake, fdMax);
             if (result) {
               lockedBet = {
                 dkOdds: data.draftkings,
-                fdOdds: data.fanduel,
+                fdOdds: opp.odds,
                 betDk: parseFloat(result.betDk),
                 betFd: parseFloat(result.betFd),
                 stake
@@ -451,7 +471,8 @@
       lockedBet = null;
       chrome.storage.local.get("arbStake", ({ arbStake }) => {
         chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-          if (data) renderBanner(data.draftkings, data.fanduel, arbStake || 100, data.fdMaxWager);
+          const opp = pickOpponent(data);
+          if (data) renderBanner(data.draftkings, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
         });
       });
     }
@@ -460,7 +481,8 @@
   // Init
   chrome.storage.local.get("arbStake", ({ arbStake }) => {
     chrome.runtime.sendMessage({ type: "GET_ODDS" }, (data) => {
-      renderBanner(data ? data.draftkings : null, data ? data.fanduel : null, arbStake || 100, data ? data.fdMaxWager : null);
+      const opp = pickOpponent(data);
+      renderBanner(data ? data.draftkings : null, opp ? opp.odds : null, arbStake || 100, opp ? opp.fdMaxWager : null, opp ? opp.site : "fanduel");
     });
   });
 

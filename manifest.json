@@ -8,7 +8,8 @@
     "https://*.draftkings.com/*",
     "https://*.fanduel.com/*",
     "https://*.fanduel.ca/*",
-    "https://*.betrivers.com/*"
+    "https://*.betrivers.com/*",
+    "https://*.betrivers.ca/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -25,7 +26,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://*.betrivers.com/*"],
+      "matches": ["https://*.betrivers.com/*", "https://*.betrivers.ca/*"],
       "js": ["content_br.js"],
       "run_at": "document_idle"
     }

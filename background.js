@@ -21,7 +21,7 @@ function broadcast() {
     tabs.forEach((tab) => {
       if (
         tab.url &&
-        (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca") || tab.url.includes("betrivers.com"))
+        (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca") || tab.url.includes("betrivers.com") || tab.url.includes("betrivers.ca"))
       ) {
         chrome.tabs.sendMessage(tab.id, {
           type: "ODDS_DATA",
@@ -102,7 +102,7 @@ function connectWebSocket(url) {
         tabs.forEach((tab) => {
           if (
             tab.url &&
-            (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca") || tab.url.includes("betrivers.com"))
+            (tab.url.includes("draftkings.com") || tab.url.includes("fanduel.com") || tab.url.includes("fanduel.ca") || tab.url.includes("betrivers.com") || tab.url.includes("betrivers.ca"))
           ) {
             chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
           }
